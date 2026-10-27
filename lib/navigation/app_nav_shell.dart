@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/theme/app_colors.dart';
 import '../core/theme/app_motion.dart';
+import '../core/widgets/directional_tab_switcher.dart';
+import '../core/widgets/floating_pill_nav_bar.dart';
 import '../data/providers/device_provider.dart';
 import '../features/activity/activity_screen.dart';
 import '../features/alerts/alerts_screen.dart';
@@ -14,10 +15,15 @@ import '../features/settings/settings_screen.dart';
 /// Standard premium page transition with fade and 16px vertical slide.
 PageRouteBuilder<T> createPremiumPageRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
-    transitionDuration: AppMotion.pageTransition,
-    reverseTransitionDuration: AppMotion.pageTransition,
+    transitionDuration: AppMotion.detailTransition,
+    reverseTransitionDuration: AppMotion.detailTransition,
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final disableAnimations =
+          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      if (disableAnimations) {
+        return child;
+      }
       final curvedAnimation = CurvedAnimation(
         parent: animation,
         curve: AppMotion.enterCurve,
@@ -88,11 +94,6 @@ class _AppNavShellState extends ConsumerState<AppNavShell>
 
   @override
   Widget build(BuildContext context) {
-    final transitionDuration = AppMotion.duration(
-      context,
-      AppMotion.pageTransition,
-    );
-
     final screens = <Widget>[
       DashboardScreen(
         onNavigateToTab: _navigateToTab,
@@ -104,79 +105,36 @@ class _AppNavShellState extends ConsumerState<AppNavShell>
     ];
 
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: transitionDuration,
-        switchInCurve: AppMotion.enterCurve,
-        switchOutCurve: AppMotion.stateChangeCurve,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.0, 0.025), // ~16px subtle vertical motion
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_currentIndex),
-          child: screens[_currentIndex],
-        ),
+      extendBody: true,
+      body: DirectionalTabSwitcher(
+        currentIndex: _currentIndex,
+        children: screens,
       ),
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          backgroundColor: AppColors.slateSurface,
-          indicatorColor: AppColors.mintGreenContainer,
-          iconTheme: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return const IconThemeData(color: AppColors.mintGreen);
-            }
-            return const IconThemeData(color: AppColors.textSecondary);
-          }),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return const TextStyle(
-                color: AppColors.mintGreen,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              );
-            }
-            return const TextStyle(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
-              fontSize: 12,
-            );
-          }),
-        ),
-        child: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: _navigateToTab,
-          height: 68,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.tune_outlined),
-              selectedIcon: Icon(Icons.tune_rounded),
-              label: 'Controls',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.history_outlined),
-              selectedIcon: Icon(Icons.history_rounded),
-              label: 'Activity',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings_rounded),
-              label: 'Settings',
-            ),
-          ],
-        ),
+      bottomNavigationBar: FloatingPillNavBar(
+        currentIndex: _currentIndex,
+        onTap: _navigateToTab,
+        items: const [
+          FloatingNavItem(
+            icon: Icons.home_outlined,
+            selectedIcon: Icons.home_rounded,
+            label: 'Home',
+          ),
+          FloatingNavItem(
+            icon: Icons.tune_outlined,
+            selectedIcon: Icons.tune_rounded,
+            label: 'Controls',
+          ),
+          FloatingNavItem(
+            icon: Icons.history_outlined,
+            selectedIcon: Icons.history_rounded,
+            label: 'Activity',
+          ),
+          FloatingNavItem(
+            icon: Icons.settings_outlined,
+            selectedIcon: Icons.settings_rounded,
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }

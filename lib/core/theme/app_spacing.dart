@@ -27,6 +27,12 @@ abstract final class AppSpacing {
     horizontal: lg,
     vertical: xl,
   );
+  static const EdgeInsets paddingScreenWithNav = EdgeInsets.fromLTRB(
+    lg,
+    xl,
+    lg,
+    96.0,
+  );
   static const EdgeInsets paddingCard = EdgeInsets.all(lg);
   static const EdgeInsets paddingModal = EdgeInsets.all(xxl);
 

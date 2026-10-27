@@ -135,42 +135,68 @@ class ControlsScreen extends ConsumerWidget {
     if (pending) return;
 
     if (mode == OperatingMode.maintenance) {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showModalBottomSheet<bool>(
         context: context,
-        builder: (dialogCtx) => AlertDialog(
-          backgroundColor: AppColors.slateSurface,
-          shape: RoundedRectangleBorder(
-            borderRadius: AppRadii.borderRadiusLg,
-            side: const BorderSide(color: AppColors.warning),
-          ),
-          title: Row(
-            children: const [
-              Icon(Icons.build_rounded, color: AppColors.warning),
-              AppSpacing.gapW8,
-              Text(
-                'Enable Maintenance Mode?',
-                style: AppTextStyles.titleMedium,
-              ),
-            ],
-          ),
-          content: const Text(
-            'Maintenance Mode locks the bin lid closed and halts automatic proximity actuation routines. This prevents accidental opening while replacing waste bags or cleaning.',
-            style: AppTextStyles.bodyMedium,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(false),
-              child: const Text('Cancel'),
+        backgroundColor: AppColors.slateSurface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          side: BorderSide(color: AppColors.warning, width: 1),
+        ),
+        enableDrag: true,
+        showDragHandle: true,
+        constraints: const BoxConstraints(maxWidth: 600),
+        builder: (sheetCtx) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.build_rounded, color: AppColors.warning),
+                    AppSpacing.gapW8,
+                    Expanded(
+                      child: Text(
+                        'Enable Maintenance Mode?',
+                        style: AppTextStyles.titleMedium,
+                      ),
+                    ),
+                  ],
+                ),
+                AppSpacing.gapH12,
+                const Text(
+                  'Maintenance Mode locks the bin lid closed and halts automatic proximity actuation routines. This prevents accidental opening while replacing waste bags or cleaning.',
+                  style: AppTextStyles.bodyMedium,
+                ),
+                AppSpacing.gapH24,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(sheetCtx).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    AppSpacing.gapW12,
+                    Expanded(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.warning,
+                          minimumSize: const Size(0, 44),
+                        ),
+                        onPressed: () => Navigator.of(sheetCtx).pop(true),
+                        child: const Text(
+                          'Lock & Enable',
+                          style: TextStyle(color: AppColors.onWarningContainer),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.warning),
-              onPressed: () => Navigator.of(dialogCtx).pop(true),
-              child: const Text(
-                'Lock & Enable',
-                style: TextStyle(color: AppColors.onWarningContainer),
-              ),
-            ),
-          ],
+          ),
         ),
       );
       if (confirmed != true) return;
@@ -222,7 +248,7 @@ class ControlsScreen extends ConsumerWidget {
             final isMaintenance = status.mode == OperatingMode.maintenance;
 
             return SingleChildScrollView(
-              padding: AppSpacing.paddingScreen,
+              padding: AppSpacing.paddingScreenWithNav,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

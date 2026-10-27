@@ -191,12 +191,18 @@ class MonitoringScreen extends ConsumerWidget {
                           ),
                           AppSpacing.gapH24,
 
-                          // Large Animated Gauge (Fill Sensor Only)
-                          AnimatedFillGauge(
-                            fillPercentage: fill,
-                            isDemo: status.isDemo,
-                            size: 220,
-                            strokeWidth: 16,
+                          // Large Animated Gauge (Fill Sensor Only) with Hero Shared Element
+                          Hero(
+                            tag: 'ecobin_hero_fill_gauge',
+                            child: Material(
+                              color: Colors.transparent,
+                              child: AnimatedFillGauge(
+                                fillPercentage: fill,
+                                isDemo: status.isDemo,
+                                size: 220,
+                                strokeWidth: 16,
+                              ),
+                            ),
                           ),
                           AppSpacing.gapH24,
 

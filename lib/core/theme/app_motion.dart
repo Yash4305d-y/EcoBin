@@ -18,6 +18,7 @@ abstract final class AppMotion {
   static const Duration micro = Duration(milliseconds: 150);
   static const Duration standard = Duration(milliseconds: 300);
   static const Duration pageTransition = Duration(milliseconds: 300);
+  static const Duration detailTransition = Duration(milliseconds: 380);
   static const Duration gaugeFill = Duration(milliseconds: 750);
   static const Duration staggerDelay = Duration(milliseconds: 60);
 

@@ -205,7 +205,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(title: const Text('Device Settings & Configuration')),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: AppSpacing.paddingScreen,
+          padding: AppSpacing.paddingScreenWithNav,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

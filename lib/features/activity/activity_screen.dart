@@ -61,7 +61,7 @@ class ActivityScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Bin Activity & History')),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: AppSpacing.paddingScreen,
+          padding: AppSpacing.paddingScreenWithNav,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

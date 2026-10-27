@@ -191,7 +191,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildLoadingSkeleton() {
     return SingleChildScrollView(
-      padding: AppSpacing.paddingScreen,
+      padding: AppSpacing.paddingScreenWithNav,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: const [
@@ -296,7 +296,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 : _formatTime(status.lastUpdated);
 
             return SingleChildScrollView(
-              padding: AppSpacing.paddingScreen,
+              padding: AppSpacing.paddingScreenWithNav,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -456,11 +456,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             ),
                             AppSpacing.gapH24,
 
-                            // Radial Fill Gauge
-                            AnimatedFillGauge(
-                              fillPercentage: status.fillPercentage,
-                              isDemo: status.isDemo,
-                              size: 185,
+                            // Radial Fill Gauge with Hero Shared Transition to Monitoring Screen
+                            GestureDetector(
+                              onTap: _openMonitoringScreen,
+                              behavior: HitTestBehavior.opaque,
+                              child: Hero(
+                                tag: 'ecobin_hero_fill_gauge',
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: AnimatedFillGauge(
+                                    fillPercentage: status.fillPercentage,
+                                    isDemo: status.isDemo,
+                                    size: 185,
+                                  ),
+                                ),
+                              ),
                             ),
                             AppSpacing.gapH20,
 
