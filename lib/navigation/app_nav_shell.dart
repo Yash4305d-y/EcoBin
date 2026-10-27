@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/app_colors.dart';
+import '../data/providers/device_provider.dart';
 import '../features/activity/activity_screen.dart';
 import '../features/alerts/alerts_screen.dart';
 import '../features/controls/controls_screen.dart';
@@ -9,15 +11,39 @@ import '../features/debug_logs/debug_logs_screen.dart';
 import '../features/monitoring/monitoring_screen.dart';
 import '../features/settings/settings_screen.dart';
 
-class AppNavShell extends StatefulWidget {
+class AppNavShell extends ConsumerStatefulWidget {
   const AppNavShell({super.key});
 
   @override
-  State<AppNavShell> createState() => _AppNavShellState();
+  ConsumerState<AppNavShell> createState() => _AppNavShellState();
 }
 
-class _AppNavShellState extends State<AppNavShell> {
+class _AppNavShellState extends ConsumerState<AppNavShell>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final repo = ref.read(deviceRepositoryProvider);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      repo.pausePolling();
+    } else if (state == AppLifecycleState.resumed) {
+      repo.resumePolling();
+    }
+  }
 
   void _navigateToTab(int index) {
     setState(() {

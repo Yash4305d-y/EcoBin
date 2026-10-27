@@ -5,21 +5,63 @@ import '../models/debug_log_entry.dart';
 import '../models/device_event.dart';
 import '../models/device_status.dart';
 import '../repositories/device_repository.dart';
+import '../repositories/http_device_repository.dart';
 import '../repositories/mock_device_repository.dart';
+import '../services/device_api_service.dart';
+import 'settings_provider.dart';
 
-/// Provides the active [DeviceRepository] implementation.
-/// Currently defaults to [MockDeviceRepository] in Phase 2.
-final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
-  return MockDeviceRepository();
+/// Provides the low-level HTTP API client.
+final deviceApiServiceProvider = Provider<DeviceApiService>((ref) {
+  final service = DeviceApiService();
+  ref.onDispose(service.dispose);
+  return service;
 });
 
-/// Streams real-time / simulated updates of the [DeviceStatus].
+/// Dedicated in-memory mock repository for Demo Mode.
+final mockDeviceRepositoryProvider = Provider<MockDeviceRepository>((ref) {
+  final repo = MockDeviceRepository();
+  ref.onDispose(repo.dispose);
+  return repo;
+});
+
+/// Dedicated real HTTP repository targeting physical ESP32 endpoints.
+final httpDeviceRepositoryProvider = Provider<HttpDeviceRepository>((ref) {
+  final apiService = ref.watch(deviceApiServiceProvider);
+  final settings = ref.watch(settingsProvider);
+
+  final repo = HttpDeviceRepository(
+    apiService: apiService,
+    deviceIp: settings.deviceIp,
+    autoStartPolling: !settings.isDemoMode,
+  );
+  ref.onDispose(repo.dispose);
+  return repo;
+});
+
+/// Dynamically selects the active [DeviceRepository] based on Demo Mode setting.
+///
+/// Guaranteed separation:
+/// - In Demo Mode: returns [MockDeviceRepository]
+/// - In Real Mode: returns [HttpDeviceRepository] with zero simulated telemetry leakage.
+final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
+  final settings = ref.watch(settingsProvider);
+
+  if (settings.isDemoMode) {
+    return ref.watch(mockDeviceRepositoryProvider);
+  } else {
+    final httpRepo = ref.watch(httpDeviceRepositoryProvider);
+    httpRepo.updateDeviceIp(settings.deviceIp);
+    return httpRepo;
+  }
+});
+
+/// Streams real-time / polled updates of the [DeviceStatus].
 final deviceStatusProvider = StreamProvider<DeviceStatus>((ref) {
   final repository = ref.watch(deviceRepositoryProvider);
   return repository.watchStatus();
 });
 
-/// Manages whether a hardware or simulated command is currently executing.
+/// Manages whether a hardware command is currently executing.
 /// Used to disable conflicting actions in the UI.
 class CommandPendingNotifier extends Notifier<bool> {
   @override

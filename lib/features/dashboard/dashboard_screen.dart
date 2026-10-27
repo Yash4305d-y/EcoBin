@@ -7,6 +7,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/animated_fill_gauge.dart';
 import '../../core/widgets/demo_badge.dart';
+import '../../data/models/device_connection_state.dart';
 import '../../data/models/device_status.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -99,8 +100,16 @@ class DashboardScreen extends ConsumerWidget {
                         Container(
                           width: 10,
                           height: 10,
-                          decoration: const BoxDecoration(
-                            color: AppColors.mintGreen,
+                          decoration: BoxDecoration(
+                            color: status.isDemo
+                                ? AppColors.warning
+                                : status.connectionStatus ==
+                                      DeviceConnectionStatus.online
+                                ? AppColors.mintGreen
+                                : status.connectionStatus ==
+                                      DeviceConnectionStatus.connecting
+                                ? AppColors.info
+                                : AppColors.error,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -112,7 +121,7 @@ class DashboardScreen extends ConsumerWidget {
                               Text(
                                 status.isDemo
                                     ? 'Demo Environment (Simulated)'
-                                    : 'Connected to ${status.deviceIp ?? "ESP32"}',
+                                    : '${status.connectionStatus.displayName}: http://${status.deviceIp ?? "ESP32"}',
                                 style: AppTextStyles.titleSmall,
                               ),
                               Text(
@@ -122,7 +131,35 @@ class DashboardScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        if (status.isDemo) const DemoBadge(),
+                        if (status.isDemo)
+                          const DemoBadge()
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  status.connectionStatus ==
+                                      DeviceConnectionStatus.online
+                                  ? AppColors.mintGreenContainer
+                                  : AppColors.errorContainer,
+                              borderRadius: AppRadii.borderRadiusXs,
+                            ),
+                            child: Text(
+                              status.connectionStatus.displayName.toUpperCase(),
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color:
+                                    status.connectionStatus ==
+                                        DeviceConnectionStatus.online
+                                    ? AppColors.onMintGreenContainer
+                                    : AppColors.onErrorContainer,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),

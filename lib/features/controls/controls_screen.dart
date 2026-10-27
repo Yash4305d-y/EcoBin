@@ -41,10 +41,24 @@ class ControlsScreen extends ConsumerWidget {
       await ref.read(deviceRepositoryProvider).openLid();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Simulated Action: Servo opened lid (Demo Mode).'),
+          SnackBar(
+            content: Text(
+              status.isDemo
+                  ? 'Simulated Action: Servo opened lid (Demo Mode).'
+                  : 'HTTP Command Sent: POST /api/lid/open -> Confirmed.',
+            ),
             backgroundColor: AppColors.successContainer,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Command failed: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -70,10 +84,24 @@ class ControlsScreen extends ConsumerWidget {
       await ref.read(deviceRepositoryProvider).closeLid();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Simulated Action: Servo closed lid (Demo Mode).'),
+          SnackBar(
+            content: Text(
+              status.isDemo
+                  ? 'Simulated Action: Servo closed lid (Demo Mode).'
+                  : 'HTTP Command Sent: POST /api/lid/close -> Confirmed.',
+            ),
             backgroundColor: AppColors.slateSurfaceVariant,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Command failed: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -96,8 +124,18 @@ class ControlsScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Simulated Mode: Changed to ${mode.displayName}.'),
+            content: Text('Mode updated: ${mode.displayName}.'),
             duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Mode change failed: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
           ),
         );
       }

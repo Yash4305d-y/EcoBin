@@ -148,6 +148,29 @@ class DebugLogsScreen extends ConsumerWidget {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
+                                    color: log.isDemo
+                                        ? AppColors.warningContainer
+                                        : AppColors.mintGreenContainer,
+                                    borderRadius: AppRadii.borderRadiusXs,
+                                  ),
+                                  child: Text(
+                                    log.isDemo ? 'MOCK' : 'REAL HTTP',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: log.isDemo
+                                          ? AppColors.onWarningContainer
+                                          : AppColors.onMintGreenContainer,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 9,
+                                    ),
+                                  ),
+                                ),
+                                AppSpacing.gapW8,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.xs,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
                                     color: color.withValues(alpha: 0.15),
                                     borderRadius: AppRadii.borderRadiusXs,
                                   ),

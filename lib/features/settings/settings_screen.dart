@@ -6,6 +6,7 @@ import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/demo_badge.dart';
+import '../../data/providers/device_provider.dart';
 import '../../data/providers/settings_provider.dart';
 import '../../data/services/settings_service.dart';
 
@@ -66,23 +67,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _showTestConnectionDialog() {
-    final currentIp = ref.read(settingsProvider).deviceIp;
+  Future<void> _handleTestConnection() async {
+    final settings = ref.read(settingsProvider);
+    final isDemo = settings.isDemoMode;
+    final ip = settings.deviceIp;
 
     showDialog<void>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        backgroundColor: AppColors.slateSurface,
+        content: Row(
+          children: [
+            CircularProgressIndicator(color: AppColors.mintGreen),
+            AppSpacing.gapW16,
+            Expanded(
+              child: Text(
+                'Probing GET /api/health...',
+                style: AppTextStyles.bodyMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final repo = ref.read(deviceRepositoryProvider);
+      final result = await repo.checkHealth();
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
           backgroundColor: AppColors.slateSurface,
           shape: RoundedRectangleBorder(
             borderRadius: AppRadii.borderRadiusLg,
-            side: const BorderSide(color: AppColors.slateOutlineVariant),
+            side: const BorderSide(color: AppColors.mintGreen),
           ),
           title: Row(
             children: const [
-              Icon(Icons.info_outline_rounded, color: AppColors.info),
+              Icon(Icons.check_circle_rounded, color: AppColors.mintGreen),
               AppSpacing.gapW8,
-              Text('Connection Test Notice', style: AppTextStyles.titleMedium),
+              Text('Connection Verified', style: AppTextStyles.titleMedium),
             ],
           ),
           content: Column(
@@ -90,15 +118,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Real ESP32 network pinging and HTTP handshake are deferred to Phase 3.',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
+                isDemo
+                    ? 'Simulated health check completed successfully.'
+                    : 'Real HTTP handshake confirmed with ESP32 at $ip.',
+                style: AppTextStyles.bodyMedium,
               ),
               AppSpacing.gapH8,
               Text(
-                'Target IP "$currentIp" is currently stored in local SharedPreferences. In Phase 2, the app operates in Demo Mode to safely validate UI and state architecture without hardware dependency.',
+                'Device: ${result["device"] ?? "ecobin-esp32"}',
+                style: AppTextStyles.bodySmall,
+              ),
+              Text(
+                'Firmware: ${result["firmware"] ?? "1.0.0"}',
+                style: AppTextStyles.bodySmall,
+              ),
+              if (result["uptime_seconds"] != null)
+                Text(
+                  'Uptime: ${result["uptime_seconds"]}s',
+                  style: AppTextStyles.bodySmall,
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppColors.slateSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadii.borderRadiusLg,
+            side: const BorderSide(color: AppColors.error),
+          ),
+          title: Row(
+            children: const [
+              Icon(Icons.error_outline_rounded, color: AppColors.error),
+              AppSpacing.gapW8,
+              Text('Connection Failed', style: AppTextStyles.titleMedium),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Could not reach ESP32 at http://$ip',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.error,
+                ),
+              ),
+              AppSpacing.gapH8,
+              Text('Error: $e', style: AppTextStyles.bodySmall),
+              AppSpacing.gapH8,
+              const Text(
+                'Troubleshooting:\n• Ensure ESP32 is powered via 5V.\n• Verify your phone is connected to the same WiFi / SoftAP.\n• Confirm device IP matches your router DHCP table.',
                 style: AppTextStyles.bodySmall,
               ),
             ],
@@ -106,12 +189,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Understood'),
+              child: const Text('Dismiss'),
             ),
           ],
-        );
-      },
-    );
+        ),
+      );
+    }
   }
 
   @override
@@ -236,7 +319,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         AppSpacing.gapW12,
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: _showTestConnectionDialog,
+                            onPressed: _handleTestConnection,
                             icon: const Icon(Icons.network_check_rounded),
                             label: const Text('Test Connection'),
                           ),

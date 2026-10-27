@@ -323,4 +323,31 @@ class MockDeviceRepository implements DeviceRepository {
     _logs.clear();
     _addLog('CORE', 'Debug execution logs cleared by user.', LogSeverity.info);
   }
+
+  @override
+  Future<Map<String, dynamic>> checkHealth() async {
+    _addLog(
+      'HEALTH_CHECK',
+      'Simulated health check ping executed (Demo Mode).',
+      LogSeverity.info,
+    );
+    return {
+      'status': 'ok',
+      'device': 'ecobin-mock',
+      'firmware': '1.0.0-demo',
+      'uptime_seconds': 3600,
+      'isDemo': true,
+    };
+  }
+
+  @override
+  void pausePolling() {}
+
+  @override
+  void resumePolling() {}
+
+  @override
+  void dispose() {
+    _statusController.close();
+  }
 }
