@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ecobin/app.dart';
 import 'package:ecobin/core/theme/app_theme.dart';
+import 'package:ecobin/data/models/device_connection_state.dart';
 import 'package:ecobin/data/models/device_status.dart';
+import 'package:ecobin/data/providers/device_provider.dart';
 import 'package:ecobin/data/repositories/mock_device_repository.dart';
 import 'package:ecobin/data/services/settings_service.dart';
 import 'package:ecobin/navigation/app_nav_shell.dart';
@@ -194,6 +196,86 @@ void main() {
 
       expect(find.text('Enable Maintenance Mode?'), findsNothing);
     });
+
+    testWidgets(
+      'Monitoring screen displays separate Hand Sensor and Fill Sensor health indicators',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({
+          SettingsService.keyOnboardingComplete: true,
+        });
+
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: const AppNavShell(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap Monitoring tab
+        await tester.tap(
+          find.widgetWithText(NavigationDestination, 'Monitoring'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dual Ultrasonic Sensors'), findsOneWidget);
+        expect(find.text('Hand Sensor'), findsOneWidget);
+        expect(find.text('Fill Sensor'), findsOneWidget);
+        expect(find.text('HEALTHY'), findsNWidgets(2));
+      },
+    );
+
+    testWidgets(
+      'Real Mode: Monitoring screen displays sensor failure distinctly and null fill as Unavailable',
+      (WidgetTester tester) async {
+        final realStatus = DeviceStatus(
+          isDemo: false,
+          connectionStatus: DeviceConnectionStatus.online,
+          lidState: LidState.closed,
+          mode: OperatingMode.automatic,
+          todayOpenings: 5,
+          openingsSinceBoot: 5,
+          lastUpdated: DateTime.now(),
+          handSensorOk: false,
+          fillSensorOk: true,
+          handDistanceCm: null,
+          fillDistanceCm: null,
+          fillPercentage: null,
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              deviceStatusProvider.overrideWith(
+                (ref) => Stream.value(realStatus),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: const AppNavShell(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap Monitoring tab
+        await tester.tap(
+          find.widgetWithText(NavigationDestination, 'Monitoring'),
+        );
+        await tester.pumpAndSettle();
+
+        // Hand sensor failure indicator
+        expect(find.text('FAILURE'), findsOneWidget);
+        expect(find.text('HEALTHY'), findsOneWidget);
+        expect(find.textContaining('Sensor failure'), findsWidgets);
+
+        // Fill percentage as Unavailable (never 0%)
+        expect(find.text('Unavailable'), findsWidgets);
+        expect(find.text('0%'), findsNothing);
+      },
+    );
   });
 
   group('MockDeviceRepository & Architecture Unit Tests', () {

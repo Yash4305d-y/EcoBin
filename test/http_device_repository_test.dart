@@ -87,6 +87,91 @@ void main() {
       },
     );
 
+    test('Dual ultrasonic sensors parsing: hand & fill sensors, distances, and openings_since_boot', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'lid_state': 'closed',
+            'mode': 'automatic',
+            'openings_since_boot': 22,
+            'hand_sensor_ok': true,
+            'fill_sensor_ok': true,
+            'hand_distance_cm': 14.5,
+            'fill_distance_cm': 32.1,
+            'fill_percentage': 45.0,
+          }),
+          200,
+        );
+      });
+
+      final service = DeviceApiService(client: mockClient);
+      final status = await service.getStatus('192.168.4.1');
+
+      expect(status.handSensorOk, isTrue);
+      expect(status.fillSensorOk, isTrue);
+      expect(status.handDistanceCm, 14.5);
+      expect(status.fillDistanceCm, 32.1);
+      expect(status.fillPercentage, 45.0);
+      expect(status.openingsSinceBoot, 22);
+      expect(status.todayOpenings, 22);
+    });
+
+    test('Hand sensor failure parsing maintains fill sensor data and null hand distance', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'lid_state': 'closed',
+            'mode': 'automatic',
+            'openings_since_boot': 8,
+            'hand_sensor_ok': false,
+            'fill_sensor_ok': true,
+            'hand_distance_cm': null,
+            'fill_distance_cm': 18.0,
+            'fill_percentage': 72.0,
+          }),
+          200,
+        );
+      });
+
+      final service = DeviceApiService(client: mockClient);
+      final status = await service.getStatus('192.168.4.1');
+
+      expect(status.handSensorOk, isFalse);
+      expect(status.fillSensorOk, isTrue);
+      expect(status.handDistanceCm, isNull);
+      expect(status.fillDistanceCm, 18.0);
+      expect(status.fillPercentage, 72.0);
+    });
+
+    test('Backward compatibility: fallback to legacy sensor_ok, distance_cm, and today_openings', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'lid_state': 'closed',
+            'mode': 'automatic',
+            'today_openings': 15,
+            'sensor_ok': true,
+            'distance_cm': 28.5,
+            'fill_percentage': 60.0,
+          }),
+          200,
+        );
+      });
+
+      final service = DeviceApiService(client: mockClient);
+      final status = await service.getStatus('192.168.4.1');
+
+      // Backward compatibility fallbacks
+      expect(status.fillSensorOk, isTrue);
+      expect(status.fillDistanceCm, 28.5);
+      expect(status.openingsSinceBoot, 15);
+      expect(status.todayOpenings, 15);
+
+      // Fields not present in legacy firmware remain null
+      expect(status.handSensorOk, isNull);
+      expect(status.handDistanceCm, isNull);
+    });
+
     test(
       'Invalid JSON and missing required fields throw DeviceDataException',
       () async {

@@ -77,10 +77,16 @@ class AnimatedFillGauge extends StatelessWidget {
                   color: AppColors.textTertiary,
                 ),
                 AppSpacing.gapH4,
-                const Text('— %', style: AppTextStyles.headlineMedium),
+                Text(
+                  'Unavailable',
+                  style: AppTextStyles.titleMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
                 AppSpacing.gapH4,
                 Text(
-                  'Sensor Offline',
+                  'Fill Sensor Offline',
                   style: AppTextStyles.labelSmall.copyWith(
                     color: AppColors.textTertiary,
                   ),

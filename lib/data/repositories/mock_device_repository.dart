@@ -18,10 +18,15 @@ class MockDeviceRepository implements DeviceRepository {
       lidState: LidState.closed,
       mode: OperatingMode.automatic,
       todayOpenings: 18,
+      openingsSinceBoot: 18,
       lastUpdated: DateTime.now().subtract(const Duration(minutes: 2)),
       deviceIp: '192.168.4.1 (Simulated SoftAP)',
       batteryPercentage: 92,
       wifiSignalDbm: -56,
+      handSensorOk: true,
+      fillSensorOk: true,
+      handDistanceCm: 42.5,
+      fillDistanceCm: 23.4,
     );
 
     _initSampleData();

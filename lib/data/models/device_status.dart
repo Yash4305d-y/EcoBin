@@ -57,13 +57,18 @@ class DeviceStatus {
     required this.mode,
     required this.todayOpenings,
     required this.lastUpdated,
+    int? openingsSinceBoot,
     this.connectionStatus = DeviceConnectionStatus.demoMode,
     this.lastSuccessfulCommunication,
     this.fillPercentage,
     this.deviceIp,
     this.batteryPercentage = 94,
     this.wifiSignalDbm = -58,
-  });
+    this.handSensorOk,
+    this.fillSensorOk,
+    this.handDistanceCm,
+    this.fillDistanceCm,
+  }) : openingsSinceBoot = openingsSinceBoot ?? todayOpenings;
 
   /// Indicates if this status is simulated mock data.
   final bool isDemo;
@@ -74,21 +79,40 @@ class DeviceStatus {
   /// Timestamp of the last verified successful HTTP exchange with hardware.
   final DateTime? lastSuccessfulCommunication;
 
-  /// Fill percentage between 0.0 and 100.0, or null if the ultrasonic/IR sensor is offline/unavailable.
+  /// Fill percentage between 0.0 and 100.0 from fill sensor, or null if offline/unavailable.
   final double? fillPercentage;
 
   final LidState lidState;
   final OperatingMode mode;
+
+  /// Opening count since ESP32 startup.
+  final int openingsSinceBoot;
+
+  /// Legacy alias for [openingsSinceBoot] to preserve backward compatibility.
   final int todayOpenings;
+
   final DateTime lastUpdated;
   final String? deviceIp;
   final int? batteryPercentage;
   final int? wifiSignalDbm;
 
+  /// Hand-detection proximity sensor health (true = OK, false = Error, null = Unreported).
+  final bool? handSensorOk;
+
+  /// Internal fill-level sensor health (true = OK, false = Error, null = Unreported).
+  final bool? fillSensorOk;
+
+  /// Distance reading from the hand sensor in cm (null if out of range or sensor offline).
+  final double? handDistanceCm;
+
+  /// Distance reading from the fill sensor in cm (null if sensor offline).
+  final double? fillDistanceCm;
+
   /// Parses JSON response from `GET /api/status`.
   ///
   /// Throws [FormatException] if required fields are missing or invalid.
   /// If `fill_percentage` is null or missing, [fillPercentage] is parsed as null.
+  /// Supports both new dual sensor fields and legacy `sensor_ok` / `distance_cm`.
   factory DeviceStatus.fromJson(
     Map<String, dynamic> json, {
     required String deviceIp,
@@ -108,8 +132,49 @@ class DeviceStatus {
       parsedFill = null;
     }
 
-    final dynamic rawOpenings = json['today_openings'];
+    // Opening count: check openings_since_boot first, fallback to today_openings
+    final dynamic rawOpenings =
+        json['openings_since_boot'] ?? json['today_openings'];
     final int openings = (rawOpenings is num) ? rawOpenings.toInt() : 0;
+
+    // Hand sensor health (hand_sensor_ok)
+    final bool? parsedHandSensorOk;
+    if (json.containsKey('hand_sensor_ok')) {
+      final dynamic rawHandOk = json['hand_sensor_ok'];
+      parsedHandSensorOk = rawHandOk is bool ? rawHandOk : null;
+    } else {
+      parsedHandSensorOk = null;
+    }
+
+    // Fill sensor health (fill_sensor_ok with fallback to legacy sensor_ok)
+    final bool? parsedFillSensorOk;
+    if (json.containsKey('fill_sensor_ok')) {
+      final dynamic rawFillOk = json['fill_sensor_ok'];
+      parsedFillSensorOk = rawFillOk is bool ? rawFillOk : null;
+    } else if (json.containsKey('sensor_ok')) {
+      final dynamic rawLegacyOk = json['sensor_ok'];
+      parsedFillSensorOk = rawLegacyOk is bool ? rawLegacyOk : null;
+    } else {
+      parsedFillSensorOk = null;
+    }
+
+    // Hand distance (hand_distance_cm)
+    final double? parsedHandDistance;
+    final dynamic rawHandDist = json['hand_distance_cm'];
+    if (rawHandDist is num) {
+      parsedHandDistance = rawHandDist.toDouble();
+    } else {
+      parsedHandDistance = null;
+    }
+
+    // Fill distance (fill_distance_cm with fallback to legacy distance_cm)
+    final double? parsedFillDistance;
+    final dynamic rawFillDist = json['fill_distance_cm'] ?? json['distance_cm'];
+    if (rawFillDist is num) {
+      parsedFillDistance = rawFillDist.toDouble();
+    } else {
+      parsedFillDistance = null;
+    }
 
     final dynamic rawBattery = json['battery_percentage'];
     final int? battery = (rawBattery is num) ? rawBattery.toInt() : null;
@@ -128,8 +193,13 @@ class DeviceStatus {
       lidState: LidState.fromString(json['lid_state']?.toString()),
       mode: OperatingMode.fromString(json['mode']?.toString()),
       todayOpenings: openings,
+      openingsSinceBoot: openings,
       batteryPercentage: battery,
       wifiSignalDbm: signal,
+      handSensorOk: parsedHandSensorOk,
+      fillSensorOk: parsedFillSensorOk,
+      handDistanceCm: parsedHandDistance,
+      fillDistanceCm: parsedFillDistance,
       lastUpdated: now,
     );
   }
@@ -142,11 +212,18 @@ class DeviceStatus {
     LidState? lidState,
     OperatingMode? mode,
     int? todayOpenings,
+    int? openingsSinceBoot,
     DateTime? lastUpdated,
     String? deviceIp,
     int? batteryPercentage,
     int? wifiSignalDbm,
+    bool? Function()? handSensorOk,
+    bool? Function()? fillSensorOk,
+    double? Function()? handDistanceCm,
+    double? Function()? fillDistanceCm,
   }) {
+    final effectiveOpenings =
+        openingsSinceBoot ?? todayOpenings ?? this.openingsSinceBoot;
     return DeviceStatus(
       isDemo: isDemo ?? this.isDemo,
       connectionStatus: connectionStatus ?? this.connectionStatus,
@@ -157,11 +234,20 @@ class DeviceStatus {
           : this.fillPercentage,
       lidState: lidState ?? this.lidState,
       mode: mode ?? this.mode,
-      todayOpenings: todayOpenings ?? this.todayOpenings,
+      todayOpenings: effectiveOpenings,
+      openingsSinceBoot: effectiveOpenings,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       deviceIp: deviceIp ?? this.deviceIp,
       batteryPercentage: batteryPercentage ?? this.batteryPercentage,
       wifiSignalDbm: wifiSignalDbm ?? this.wifiSignalDbm,
+      handSensorOk: handSensorOk != null ? handSensorOk() : this.handSensorOk,
+      fillSensorOk: fillSensorOk != null ? fillSensorOk() : this.fillSensorOk,
+      handDistanceCm: handDistanceCm != null
+          ? handDistanceCm()
+          : this.handDistanceCm,
+      fillDistanceCm: fillDistanceCm != null
+          ? fillDistanceCm()
+          : this.fillDistanceCm,
     );
   }
 }

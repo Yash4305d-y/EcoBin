@@ -55,7 +55,7 @@ class ActivityScreen extends ConsumerWidget {
     final eventsAsync = ref.watch(deviceEventsProvider);
     final statusAsync = ref.watch(deviceStatusProvider);
     final isDemo = statusAsync.value?.isDemo ?? true;
-    final todayCount = statusAsync.value?.todayOpenings ?? 0;
+    final todayCount = statusAsync.value?.openingsSinceBoot ?? 0;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bin Activity & History')),
@@ -101,12 +101,12 @@ class ActivityScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: _SummaryBox(
-                      title: "Today's Usage",
+                      title: 'Since Boot',
                       stat: '$todayCount Openings',
                       detail: isDemo
                           ? 'Peak: 1:15 PM – 2:00 PM'
                           : 'ESP32 hardware counter',
-                      icon: Icons.today_rounded,
+                      icon: Icons.repeat_rounded,
                     ),
                   ),
                   AppSpacing.gapW12,

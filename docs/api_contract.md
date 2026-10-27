@@ -45,10 +45,14 @@ Periodic telemetry polling endpoint called by the companion app every 5 seconds.
 - **Success Response (`200 OK`)**:
   ```json
   {
-    "fill_percentage": 64.5,
     "lid_state": "closed",
     "mode": "automatic",
-    "today_openings": 18,
+    "openings_since_boot": 18,
+    "hand_sensor_ok": true,
+    "fill_sensor_ok": true,
+    "hand_distance_cm": 42.5,
+    "fill_distance_cm": 23.4,
+    "fill_percentage": 64.5,
     "battery_percentage": 92,
     "wifi_signal_dbm": -56
   }
@@ -57,12 +61,22 @@ Periodic telemetry polling endpoint called by the companion app every 5 seconds.
 #### Field Specifications:
 | Field | Type | Allowed Values | Nullable? | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `fill_percentage` | `float` | `0.0` – `100.0` | **YES** | Null when ultrasonic sensor echo fails. |
 | `lid_state` | `string` | `"open"`, `"closed"`, `"moving"`, `"unknown"` | No | Current physical/servo switch state. |
 | `mode` | `string` | `"automatic"`, `"manual"`, `"maintenance"` | No | Active operating policy. |
-| `today_openings` | `int` | `>= 0` | No | Daily opening counter tracked on ESP32. |
+| `openings_since_boot` | `int` | `>= 0` | No | Opening counter since boot (legacy alias: `today_openings`). |
+| `hand_sensor_ok` | `bool` | `true`, `false` | Yes | Hand proximity sensor hardware health status. |
+| `fill_sensor_ok` | `bool` | `true`, `false` | Yes | Internal waste depth sensor health (legacy fallback: `sensor_ok`). |
+| `hand_distance_cm` | `float` | `>= 0.0` | Yes | Measured distance to hand in cm (null if out of range). |
+| `fill_distance_cm` | `float` | `>= 0.0` | Yes | Measured depth to waste level in cm (legacy fallback: `distance_cm`). |
+| `fill_percentage` | `float` | `0.0` – `100.0` | **YES** | Null when internal fill sensor echo fails (never falsified as 0%). |
 | `battery_percentage` | `int` | `0` – `100` | Yes | Power cell reading (null if USB wall powered). |
 | `wifi_signal_dbm` | `int` | e.g. `-90` to `-30` | Yes | Station RSSI (null in SoftAP mode). |
+
+#### Backward Compatibility Rules:
+- If `openings_since_boot` is absent, app parses `today_openings`.
+- If `fill_sensor_ok` is absent, app parses legacy `sensor_ok`.
+- If `fill_distance_cm` is absent, app parses legacy `distance_cm`.
+- App labels opening counts as **"Since boot"**.
 
 ---
 

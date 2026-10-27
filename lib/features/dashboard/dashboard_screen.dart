@@ -231,8 +231,8 @@ class DashboardScreen extends ConsumerWidget {
                       Expanded(
                         child: _StatCard(
                           icon: Icons.repeat_rounded,
-                          label: "Today's Openings",
-                          value: '${status.todayOpenings}',
+                          label: 'Since Boot',
+                          value: '${status.openingsSinceBoot}',
                           subtitle: status.isDemo
                               ? 'Simulated counter'
                               : 'ESP32 hardware counter',
