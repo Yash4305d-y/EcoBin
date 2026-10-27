@@ -53,7 +53,7 @@ class FloatingPillNavBar extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         child: Container(
-          height: 60,
+          height: 64,
           decoration: BoxDecoration(
             color: AppColors.slateSurface,
             borderRadius: BorderRadius.circular(32),
@@ -94,10 +94,10 @@ class FloatingPillNavBar extends StatelessWidget {
                       ),
                       child: Container(
                         width: slotWidth - 8,
-                        height: 48,
+                        height: 52,
                         decoration: BoxDecoration(
                           color: AppColors.mintGreenContainer,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(26),
                           border: Border.all(
                             color: AppColors.mintGreen.withValues(alpha: 0.35),
                             width: 1,
@@ -187,15 +187,15 @@ class _PillNavButtonState extends State<_PillNavButton> {
           duration: AppMotion.micro,
           curve: AppMotion.stateChangeCurve,
           child: SizedBox(
-            height: 60,
+            height: 64,
             child: Center(
-              child: Row(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Scaled & Glowing Active Icon
                   AnimatedScale(
-                    scale: widget.isSelected ? 1.12 : 1.0,
+                    scale: widget.isSelected ? 1.08 : 1.0,
                     duration: widget.duration,
                     curve: AppMotion.popFeedbackCurve,
                     child: AnimatedOpacity(
@@ -229,24 +229,27 @@ class _PillNavButtonState extends State<_PillNavButton> {
                     ),
                   ),
 
-                  // Reveal active label smoothly with AnimatedSize and Fade
+                  // Reveal active label smoothly below icon with AnimatedSize and Fade
                   AnimatedSize(
                     duration: widget.duration,
                     curve: AppMotion.enterCurve,
                     child: widget.isSelected
-                        ? Row(
+                        ? Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const SizedBox(width: 6),
+                              const SizedBox(height: 3),
                               AnimatedOpacity(
                                 opacity: 1.0,
                                 duration: widget.duration,
                                 child: Text(
                                   widget.item.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: AppTextStyles.labelSmall.copyWith(
                                     color: AppColors.mintGreen,
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 12,
+                                    fontSize: 11,
+                                    letterSpacing: 0.2,
                                   ),
                                 ),
                               ),
