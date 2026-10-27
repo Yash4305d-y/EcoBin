@@ -12,7 +12,6 @@ import 'package:ecobin/data/models/device_status.dart';
 import 'package:ecobin/data/providers/device_provider.dart';
 import 'package:ecobin/data/providers/settings_provider.dart';
 import 'package:ecobin/data/repositories/http_device_repository.dart';
-import 'package:ecobin/data/repositories/mock_device_repository.dart';
 import 'package:ecobin/data/services/device_api_service.dart';
 
 void main() {
@@ -347,8 +346,8 @@ void main() {
     });
   });
 
-  group('Provider Selection & State Isolation Tests', () {
-    test('Switching between Demo Mode and Real Mode isolates repository state cleanly', () async {
+  group('Provider Selection & Direct HTTP Connection Tests', () {
+    test('deviceRepositoryProvider connects directly to HttpDeviceRepository with configured IP', () async {
       final container = ProviderContainer(
         overrides: [
           deviceApiServiceProvider.overrideWithValue(
@@ -369,27 +368,22 @@ void main() {
         ],
       );
 
-      // Starts in Demo Mode by default
+      // App defaults to real mode (Demo Mode removed)
       final initialSettings = container.read(settingsProvider);
-      expect(initialSettings.isDemoMode, isTrue);
+      expect(initialSettings.isDemoMode, isFalse);
 
       final initialRepo = container.read(deviceRepositoryProvider);
-      expect(initialRepo, isA<MockDeviceRepository>());
-      expect(initialRepo.getCurrentStatus().isDemo, isTrue);
+      expect(initialRepo, isA<HttpDeviceRepository>());
+      expect(initialRepo.getCurrentStatus().isDemo, isFalse);
 
-      // Switch to Real Mode
-      await container.read(settingsProvider.notifier).setDemoMode(false);
+      // Updating IP updates repository target
+      await container
+          .read(settingsProvider.notifier)
+          .updateDeviceIp('192.168.1.100');
 
-      final realRepo = container.read(deviceRepositoryProvider);
-      expect(realRepo, isA<HttpDeviceRepository>());
-      expect(realRepo.getCurrentStatus().isDemo, isFalse);
-
-      // Switch back to Demo Mode
-      await container.read(settingsProvider.notifier).setDemoMode(true);
-
-      final demoRepoAgain = container.read(deviceRepositoryProvider);
-      expect(demoRepoAgain, isA<MockDeviceRepository>());
-      expect(demoRepoAgain.getCurrentStatus().isDemo, isTrue);
+      final updatedRepo = container.read(deviceRepositoryProvider);
+      expect(updatedRepo, isA<HttpDeviceRepository>());
+      expect(container.read(settingsProvider).deviceIp, '192.168.1.100');
 
       container.dispose();
     });

@@ -32,27 +32,18 @@ final httpDeviceRepositoryProvider = Provider<HttpDeviceRepository>((ref) {
   final repo = HttpDeviceRepository(
     apiService: apiService,
     deviceIp: settings.deviceIp,
-    autoStartPolling: !settings.isDemoMode,
+    autoStartPolling: true,
   );
   ref.onDispose(repo.dispose);
   return repo;
 });
 
-/// Dynamically selects the active [DeviceRepository] based on Demo Mode setting.
-///
-/// Guaranteed separation:
-/// - In Demo Mode: returns [MockDeviceRepository]
-/// - In Real Mode: returns [HttpDeviceRepository] with zero simulated telemetry leakage.
+/// Provides the active [DeviceRepository] directly connecting to the configured ESP32 IP.
 final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
   final settings = ref.watch(settingsProvider);
-
-  if (settings.isDemoMode) {
-    return ref.watch(mockDeviceRepositoryProvider);
-  } else {
-    final httpRepo = ref.watch(httpDeviceRepositoryProvider);
-    httpRepo.updateDeviceIp(settings.deviceIp);
-    return httpRepo;
-  }
+  final httpRepo = ref.watch(httpDeviceRepositoryProvider);
+  httpRepo.updateDeviceIp(settings.deviceIp);
+  return httpRepo;
 });
 
 /// Streams real-time / polled updates of the [DeviceStatus].

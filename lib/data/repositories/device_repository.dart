@@ -14,6 +14,9 @@ abstract class DeviceRepository {
   /// Probes device health (`GET /api/health`).
   Future<Map<String, dynamic>> checkHealth();
 
+  /// Triggers an immediate status refresh from the device.
+  Future<void> refreshStatus();
+
   /// Issues a command to open the lid.
   Future<void> openLid();
 

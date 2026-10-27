@@ -12,7 +12,7 @@ class SettingsState {
 
   factory SettingsState.initial() => const SettingsState(
     deviceIp: SettingsService.defaultIp,
-    isDemoMode: true,
+    isDemoMode: false,
     isOnboardingCompleted: false,
     isLoaded: false,
   );
@@ -55,6 +55,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final demo = await service.isDemoMode();
     final onboarding = await service.isOnboardingCompleted();
 
+    if (!ref.mounted) return;
     state = state.copyWith(
       deviceIp: ip,
       isDemoMode: demo,

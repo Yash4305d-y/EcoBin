@@ -5,7 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/widgets/demo_badge.dart';
 import '../../data/models/debug_log_entry.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -35,14 +34,10 @@ class DebugLogsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final logsAsync = ref.watch(debugLogsProvider);
-    final statusAsync = ref.watch(deviceStatusProvider);
-    final isDemo = statusAsync.value?.isDemo ?? true;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          isDemo ? 'Debug Logs (Demo Mode)' : 'Network & Diagnostic Logs',
-        ),
+        title: const Text('Network & Diagnostic Logs'),
         actions: [
           IconButton(
             tooltip: 'Clear Logs',
@@ -72,7 +67,7 @@ class DebugLogsScreen extends ConsumerWidget {
                     ],
                   ),
                   content: const Text(
-                    'This will clear all in-memory diagnostic trace entries recorded during this session.',
+                    'This will clear all diagnostic trace entries recorded during this session.',
                     style: AppTextStyles.bodyMedium,
                   ),
                   actions: [
@@ -110,47 +105,36 @@ class DebugLogsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (isDemo)
-                const DemoBanner(
-                  message: 'Simulated Log Stream: Records app action dispatches and mock state transitions. No real HTTP wire requests are fabricated.',
-                )
-              else
-                Container(
-                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  padding: AppSpacing.paddingCard,
-                  decoration: BoxDecoration(
-                    color: AppColors.slateSurfaceCard,
-                    borderRadius: AppRadii.borderRadiusMd,
-                    border: Border.all(color: AppColors.slateOutlineVariant),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.lan_rounded,
-                        color: AppColors.mintGreen,
-                        size: 20,
-                      ),
-                      AppSpacing.gapW12,
-                      Expanded(
-                        child: Text(
-                          'Live Wire Diagnostics: Records raw HTTP endpoint transactions, latency, response codes, and network connection state changes.',
-                          style: AppTextStyles.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
+              Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                padding: AppSpacing.paddingCard,
+                decoration: BoxDecoration(
+                  color: AppColors.slateSurfaceCard,
+                  borderRadius: AppRadii.borderRadiusMd,
+                  border: Border.all(color: AppColors.slateOutlineVariant),
                 ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.lan_rounded,
+                      color: AppColors.mintGreen,
+                      size: 20,
+                    ),
+                    AppSpacing.gapW12,
+                    Expanded(
+                      child: Text(
+                        'Diagnostics: Records raw HTTP endpoint transactions, latency, response codes, and network connection state changes.',
+                        style: AppTextStyles.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               AppSpacing.gapH8,
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Recent Execution Trace',
-                    style: AppTextStyles.titleMedium,
-                  ),
-                  DemoBadge(text: 'IN-MEMORY TRACE'),
-                ],
+              const Text(
+                'Recent Execution Trace',
+                style: AppTextStyles.titleMedium,
               ),
               AppSpacing.gapH12,
 
@@ -224,23 +208,18 @@ class DebugLogsScreen extends ConsumerWidget {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: log.isDemo
-                                        ? AppColors.warningContainer
-                                        : AppColors.mintGreenContainer,
+                                    color: color.withValues(alpha: 0.15),
                                     borderRadius: AppRadii.borderRadiusXs,
                                   ),
                                   child: Text(
-                                    log.isDemo ? 'MOCK' : 'REAL HTTP',
+                                    log.severity.name.toUpperCase(),
                                     style: AppTextStyles.labelSmall.copyWith(
-                                      color: log.isDemo
-                                          ? AppColors.onWarningContainer
-                                          : AppColors.onMintGreenContainer,
+                                      color: color,
                                       fontWeight: FontWeight.w700,
                                       fontSize: 9,
                                     ),
                                   ),
                                 ),
-                                AppSpacing.gapW8,
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: AppSpacing.xs,

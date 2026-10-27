@@ -172,6 +172,11 @@ class MockDeviceRepository implements DeviceRepository {
   DeviceStatus getCurrentStatus() => _status;
 
   @override
+  Future<void> refreshStatus() async {
+    _statusController.add(_status);
+  }
+
+  @override
   Future<void> openLid() async {
     _addLog(
       'CONTROLS',

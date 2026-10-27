@@ -5,7 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/widgets/demo_badge.dart';
 import '../../data/models/app_alert.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -54,11 +53,6 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (statusAsync.value?.isDemo ?? true)
-                const DemoBanner(
-                  message: 'Sample Alerts: Displayed for in-app UI testing only. Remote push notification dispatch is not active.',
-                ),
-
               // Filter Chips
               Row(
                 children: [
@@ -107,12 +101,12 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Sensor Telemetry Unavailable',
+                                  'Fill Sensor Unavailable',
                                   style: AppTextStyles.titleSmall,
                                 ),
                                 SizedBox(height: 2),
                                 Text(
-                                  'Ultrasonic probe returned null echo. Verify hardware connections in Settings.',
+                                  'Ultrasonic fill probe returned no signal. Check bin sensor wiring.',
                                   style: AppTextStyles.bodySmall,
                                 ),
                               ],
@@ -132,7 +126,32 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.mintGreen),
                 ),
-                error: (err, _) => Center(child: Text('Error: $err')),
+                error: (_, _) => Center(
+                  child: Padding(
+                    padding: AppSpacing.paddingCard,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_rounded,
+                          size: 40,
+                          color: AppColors.textSecondary,
+                        ),
+                        AppSpacing.gapH12,
+                        const Text(
+                          "Couldn't load alerts",
+                          style: AppTextStyles.titleSmall,
+                        ),
+                        AppSpacing.gapH8,
+                        ElevatedButton.icon(
+                          onPressed: () => ref.refresh(alertsProvider),
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 data: (alerts) {
                   final filtered = alerts.where((a) {
                     if (a.isDismissed) return false;
@@ -224,30 +243,26 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                         alert.title,
                                         style: AppTextStyles.titleSmall,
                                       ),
-                                      if (alert.isDemo)
-                                        const DemoBadge(text: 'SAMPLE')
-                                      else
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: AppSpacing.xs,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.mintGreenContainer,
-                                            borderRadius:
-                                                AppRadii.borderRadiusXs,
-                                          ),
-                                          child: Text(
-                                            'SYSTEM',
-                                            style: AppTextStyles.labelSmall
-                                                .copyWith(
-                                                  color: AppColors
-                                                      .onMintGreenContainer,
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 9,
-                                                ),
-                                          ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.xs,
+                                          vertical: 2,
                                         ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.mintGreenContainer,
+                                          borderRadius: AppRadii.borderRadiusXs,
+                                        ),
+                                        child: Text(
+                                          'SYSTEM',
+                                          style: AppTextStyles.labelSmall
+                                              .copyWith(
+                                                color: AppColors
+                                                    .onMintGreenContainer,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 9,
+                                              ),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                   AppSpacing.gapH4,

@@ -58,7 +58,7 @@ class DeviceStatus {
     required this.todayOpenings,
     required this.lastUpdated,
     int? openingsSinceBoot,
-    this.connectionStatus = DeviceConnectionStatus.demoMode,
+    this.connectionStatus = DeviceConnectionStatus.connecting,
     this.lastSuccessfulCommunication,
     this.fillPercentage,
     this.deviceIp,

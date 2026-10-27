@@ -5,7 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/widgets/demo_badge.dart';
 import '../../data/models/device_status.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -44,29 +43,33 @@ class ControlsScreen extends ConsumerWidget {
             .read(deviceRepositoryProvider)
             .getCurrentStatus()
             .lidState;
-        final message = status.isDemo
-            ? 'Simulated Action: Servo opened lid (Demo Mode).'
-            : (currentLid == LidState.open
-                  ? 'HTTP Command Confirmed: Lid is OPEN.'
-                  : 'HTTP Command Accepted: Awaiting physical servo confirmation from ESP32.');
+        final isConfirmed = currentLid == LidState.open;
+        final message = isConfirmed
+            ? 'Lid is open.'
+            : 'Command sent. Awaiting confirmation from EcoBin.';
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
-            backgroundColor: currentLid == LidState.open || status.isDemo
-                ? AppColors.successContainer
-                : AppColors.slateSurfaceVariant,
+            backgroundColor: isConfirmed
+                ? AppColors.slateSurfaceVariant
+                : AppColors.warningContainer,
             duration: const Duration(seconds: 3),
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Command failed: $e'),
+            content: const Text("Couldn't connect to EcoBin."),
             backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _handleOpenLid(context, ref, status),
+            ),
           ),
         );
       }
@@ -95,29 +98,33 @@ class ControlsScreen extends ConsumerWidget {
             .read(deviceRepositoryProvider)
             .getCurrentStatus()
             .lidState;
-        final message = status.isDemo
-            ? 'Simulated Action: Servo closed lid (Demo Mode).'
-            : (currentLid == LidState.closed
-                  ? 'HTTP Command Confirmed: Lid is CLOSED.'
-                  : 'HTTP Command Accepted: Awaiting physical servo confirmation from ESP32.');
+        final isConfirmed = currentLid == LidState.closed;
+        final message = isConfirmed
+            ? 'Lid is closed.'
+            : 'Command sent. Awaiting confirmation from EcoBin.';
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
-            backgroundColor: currentLid == LidState.closed || status.isDemo
+            backgroundColor: isConfirmed
                 ? AppColors.slateSurfaceVariant
                 : AppColors.warningContainer,
             duration: const Duration(seconds: 3),
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Command failed: $e'),
+            content: const Text("Couldn't connect to EcoBin."),
             backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _handleCloseLid(context, ref, status),
+            ),
           ),
         );
       }
@@ -240,7 +247,42 @@ class ControlsScreen extends ConsumerWidget {
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.mintGreen),
           ),
-          error: (err, _) => Center(child: Text('Error: $err')),
+          error: (_, _) => Center(
+            child: Padding(
+              padding: AppSpacing.paddingCard,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.cloud_off_rounded,
+                    size: 48,
+                    color: AppColors.textSecondary,
+                  ),
+                  AppSpacing.gapH16,
+                  Text(
+                    "Couldn't connect to EcoBin",
+                    style: AppTextStyles.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.gapH8,
+                  Text(
+                    'Check that the bin is powered and on the same Wi-Fi network.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.gapH16,
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        ref.read(deviceRepositoryProvider).refreshStatus(),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
           data: (status) {
             final isLidMoving = status.lidState == LidState.moving || isPending;
             final isLidOpen = status.lidState == LidState.open;
@@ -252,11 +294,6 @@ class ControlsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (status.isDemo)
-                    const DemoBanner(
-                      message: 'Simulated Hardware: Commands execute on MockDeviceRepository with realistic latency.',
-                    ),
-
                   // Current State Summary Card with smooth transition
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
@@ -536,77 +573,6 @@ class ControlsScreen extends ConsumerWidget {
                     onTap: () =>
                         _handleSetMode(context, ref, OperatingMode.maintenance),
                   ),
-                  // Interactive Sandbox: Test Sensor Thresholds (Demo Mode Only)
-                  if (status.isDemo) ...[
-                    AppSpacing.gapH24,
-                    Container(
-                      padding: AppSpacing.paddingCard,
-                      decoration: BoxDecoration(
-                        color: AppColors.slateSurfaceCard,
-                        borderRadius: AppRadii.borderRadiusLg,
-                        border: Border.all(
-                          color: AppColors.warning.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(
-                                Icons.science_outlined,
-                                color: AppColors.warning,
-                                size: 20,
-                              ),
-                              AppSpacing.gapW8,
-                              Text(
-                                'Demo Sandbox: Sensor Simulation',
-                                style: AppTextStyles.titleSmall,
-                              ),
-                              Spacer(),
-                              DemoBadge(),
-                            ],
-                          ),
-                          AppSpacing.gapH8,
-                          const Text(
-                            'Test how the UI, gauge, and alerts respond to various capacity thresholds and offline states.',
-                            style: AppTextStyles.bodySmall,
-                          ),
-                          AppSpacing.gapH12,
-                          Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: [
-                              _QuickPresetButton(
-                                label: 'Low (25%)',
-                                onPressed: () => ref
-                                    .read(deviceRepositoryProvider)
-                                    .setFillPercentage(25.0),
-                              ),
-                              _QuickPresetButton(
-                                label: 'Moderate (64%)',
-                                onPressed: () => ref
-                                    .read(deviceRepositoryProvider)
-                                    .setFillPercentage(64.0),
-                              ),
-                              _QuickPresetButton(
-                                label: 'High (88%)',
-                                onPressed: () => ref
-                                    .read(deviceRepositoryProvider)
-                                    .setFillPercentage(88.0),
-                              ),
-                              _QuickPresetButton(
-                                label: 'Sensor Offline (Null)',
-                                onPressed: () => ref
-                                    .read(deviceRepositoryProvider)
-                                    .setFillPercentage(null),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             );
@@ -694,26 +660,6 @@ class _ModeOptionTile extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _QuickPresetButton extends StatelessWidget {
-  const _QuickPresetButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      onPressed: onPressed,
-      label: Text(label),
-      labelStyle: AppTextStyles.labelSmall.copyWith(
-        color: AppColors.textPrimary,
-      ),
-      backgroundColor: AppColors.slateSurfaceVariant,
-      side: const BorderSide(color: AppColors.slateOutlineVariant),
     );
   }
 }

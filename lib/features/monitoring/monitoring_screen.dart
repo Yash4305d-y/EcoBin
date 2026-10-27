@@ -6,7 +6,6 @@ import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/animated_fill_gauge.dart';
-import '../../core/widgets/demo_badge.dart';
 import '../../data/models/device_status.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -15,7 +14,7 @@ class MonitoringScreen extends ConsumerWidget {
 
   String _getHandDistanceDisplay(DeviceStatus status) {
     if (status.handSensorOk == false) {
-      return 'Failure';
+      return 'Unavailable';
     }
     if (status.handDistanceCm != null) {
       return '${status.handDistanceCm!.toStringAsFixed(1)} cm';
@@ -28,7 +27,7 @@ class MonitoringScreen extends ConsumerWidget {
 
   String _getHandSensorDetail(DeviceStatus status) {
     if (status.handSensorOk == false) {
-      return 'Sensor failure: Echo timeout or hardware error';
+      return 'Hand sensor unavailable';
     }
     if (status.handDistanceCm != null) {
       if (status.handDistanceCm! <= 20.0) {
@@ -45,7 +44,7 @@ class MonitoringScreen extends ConsumerWidget {
 
   String _getFillSensorDetail(DeviceStatus status) {
     if (status.fillSensorOk == false) {
-      return 'Sensor failure: Echo timeout or hardware error';
+      return 'Fill sensor unavailable';
     }
     if (status.fillDistanceCm != null) {
       return 'Depth: ${status.fillDistanceCm!.toStringAsFixed(1)} cm to waste';
@@ -70,7 +69,42 @@ class MonitoringScreen extends ConsumerWidget {
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.mintGreen),
           ),
-          error: (err, _) => Center(child: Text('Error: $err')),
+          error: (_, _) => Center(
+            child: Padding(
+              padding: AppSpacing.paddingCard,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.cloud_off_rounded,
+                    size: 48,
+                    color: AppColors.textSecondary,
+                  ),
+                  AppSpacing.gapH16,
+                  Text(
+                    "Couldn't connect to EcoBin",
+                    style: AppTextStyles.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.gapH8,
+                  Text(
+                    'Ensure the device is powered on and on the same Wi-Fi network.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.gapH16,
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        ref.read(deviceRepositoryProvider).refreshStatus(),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
           data: (status) {
             final fill = status.fillPercentage;
             final isOffline = fill == null;
@@ -80,11 +114,6 @@ class MonitoringScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (status.isDemo)
-                    const DemoBanner(
-                      message: 'Sensor Telemetry is simulated for demonstration and threshold validation.',
-                    ),
-
                   // Dual Ultrasonic Sensors Health & Telemetry Card
                   Container(
                     padding: AppSpacing.paddingCard,
@@ -96,35 +125,9 @@ class MonitoringScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Dual Ultrasonic Sensors',
-                              style: AppTextStyles.titleMedium,
-                            ),
-                            if (status.isDemo)
-                              const DemoBadge(text: 'SIMULATED DATA')
-                            else
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.sm,
-                                  vertical: AppSpacing.xs,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.mintGreenContainer,
-                                  borderRadius: AppRadii.borderRadiusXs,
-                                ),
-                                child: Text(
-                                  'REAL SENSORS',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.onMintGreenContainer,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        const Text(
+                          'Dual Ultrasonic Sensors',
+                          style: AppTextStyles.titleMedium,
                         ),
                         AppSpacing.gapH16,
                         Row(
@@ -137,7 +140,6 @@ class MonitoringScreen extends ConsumerWidget {
                                 subtitle: 'Proximity Trigger',
                                 icon: Icons.front_hand_rounded,
                                 isOk: status.handSensorOk,
-                                isDemo: status.isDemo,
                                 primaryMetric: _getHandDistanceDisplay(status),
                                 statusDetail: _getHandSensorDetail(status),
                               ),
@@ -150,7 +152,6 @@ class MonitoringScreen extends ConsumerWidget {
                                 subtitle: 'Waste Depth Level',
                                 icon: Icons.straighten_rounded,
                                 isOk: status.fillSensorOk,
-                                isDemo: status.isDemo,
                                 primaryMetric: fill != null
                                     ? '${fill.toStringAsFixed(0)}%'
                                     : 'Unavailable',
@@ -198,7 +199,6 @@ class MonitoringScreen extends ConsumerWidget {
                               color: Colors.transparent,
                               child: AnimatedFillGauge(
                                 fillPercentage: fill,
-                                isDemo: status.isDemo,
                                 size: 220,
                                 strokeWidth: 16,
                               ),
@@ -338,10 +338,8 @@ class MonitoringScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          status.isDemo
-                              ? 'Hardware Probe Metrics (Simulated)'
-                              : 'ESP32 Dual Sensor Specifications',
+                        const Text(
+                          'ESP32 Dual Sensor Specifications',
                           style: AppTextStyles.titleSmall,
                         ),
                         AppSpacing.gapH12,
@@ -404,7 +402,6 @@ class _SensorTelemetryBox extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.isOk,
-    required this.isDemo,
     required this.primaryMetric,
     required this.statusDetail,
   });
@@ -413,7 +410,6 @@ class _SensorTelemetryBox extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final bool? isOk;
-  final bool isDemo;
   final String primaryMetric;
   final String statusDetail;
 

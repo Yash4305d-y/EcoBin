@@ -8,7 +8,6 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/animated_fill_gauge.dart';
 import '../../core/widgets/count_up_text.dart';
-import '../../core/widgets/demo_badge.dart';
 import '../../core/widgets/pressable_scale.dart';
 import '../../core/widgets/pulsing_status_dot.dart';
 import '../../core/widgets/skeleton_loader.dart';
@@ -151,31 +150,32 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final targetLid = isCurrentlyOpen ? LidState.closed : LidState.open;
         final isConfirmed = currentLid == targetLid;
 
-        final message = status.isDemo
-            ? (isCurrentlyOpen
-                  ? 'Simulated: Lid closed (Demo Mode).'
-                  : 'Simulated: Lid opened (Demo Mode).')
-            : (isConfirmed
-                  ? 'Command Confirmed: Lid is ${currentLid.displayName.toUpperCase()}.'
-                  : 'Command Accepted: Awaiting physical confirmation from ESP32.');
+        final message = isConfirmed
+            ? 'Lid is ${currentLid.displayName.toLowerCase()}.'
+            : 'Command sent. Awaiting confirmation from EcoBin.';
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
-            backgroundColor: isConfirmed || status.isDemo
+            backgroundColor: isConfirmed
                 ? AppColors.slateSurfaceVariant
                 : AppColors.warningContainer,
             duration: const Duration(seconds: 3),
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Command failed: $e'),
+            content: const Text("Couldn't connect to EcoBin."),
             backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _handlePrimaryLidAction(context, status),
+            ),
           ),
         );
       }
@@ -274,15 +274,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       body: SafeArea(
         child: statusAsync.when(
           loading: _buildLoadingSkeleton,
-          error: (err, _) => Center(
+          error: (_, _) => Center(
             child: Padding(
               padding: AppSpacing.paddingCard,
-              child: Text(
-                'Error loading telemetry: $err',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.error,
-                ),
-                textAlign: TextAlign.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.cloud_off_rounded,
+                    size: 48,
+                    color: AppColors.textSecondary,
+                  ),
+                  AppSpacing.gapH16,
+                  Text(
+                    "Couldn't connect to EcoBin",
+                    style: AppTextStyles.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.gapH8,
+                  Text(
+                    'Ensure the device is powered on and your phone is connected to the same Wi-Fi network.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.gapH16,
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        ref.read(deviceRepositoryProvider).refreshStatus(),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Retry'),
+                  ),
+                ],
               ),
             ),
           ),
@@ -308,7 +332,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (status.isDemo) const DemoBanner(),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: AppSpacing.md,
@@ -325,7 +348,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                               children: [
                                 PulsingStatusDot(
                                   connectionStatus: status.connectionStatus,
-                                  isDemo: status.isDemo,
                                 ),
                                 AppSpacing.gapW8,
                                 Expanded(
@@ -340,14 +362,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                           child: child,
                                         ),
                                     child: Text(
-                                      status.isDemo
-                                          ? 'Demo Environment'
-                                          : status.connectionStatus ==
-                                                DeviceConnectionStatus.online
-                                          ? 'Connected: http://${status.deviceIp ?? "ESP32"}'
+                                      status.connectionStatus ==
+                                              DeviceConnectionStatus.online
+                                          ? (status.deviceIp != null &&
+                                                    status.deviceIp!.isNotEmpty
+                                                ? 'Connected: ${status.deviceIp}'
+                                                : 'Connected to EcoBin')
                                           : status.connectionStatus.displayName,
-                                      key: ValueKey<String>(
-                                        '${status.isDemo}-${status.connectionStatus}',
+                                      key: ValueKey<DeviceConnectionStatus>(
+                                        status.connectionStatus,
                                       ),
                                       style: AppTextStyles.bodySmall.copyWith(
                                         color: AppColors.textPrimary,
@@ -359,24 +382,60 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                   ),
                                 ),
                                 AppSpacing.gapW8,
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.access_time_rounded,
-                                      size: 13,
-                                      color: AppColors.textTertiary,
-                                    ),
-                                    AppSpacing.gapW4,
-                                    Text(
-                                      syncTime,
-                                      style: AppTextStyles.labelSmall.copyWith(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 11,
+                                if (status.connectionStatus !=
+                                    DeviceConnectionStatus.online)
+                                  InkWell(
+                                    onTap: () => ref
+                                        .read(deviceRepositoryProvider)
+                                        .refreshStatus(),
+                                    borderRadius: AppRadii.borderRadiusSm,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.refresh_rounded,
+                                            size: 13,
+                                            color: AppColors.mintGreen,
+                                          ),
+                                          AppSpacing.gapW4,
+                                          Text(
+                                            'Retry',
+                                            style: AppTextStyles.labelSmall
+                                                .copyWith(
+                                                  color: AppColors.mintGreen,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 11,
+                                                ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  )
+                                else
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.access_time_rounded,
+                                        size: 13,
+                                        color: AppColors.textTertiary,
+                                      ),
+                                      AppSpacing.gapW4,
+                                      Text(
+                                        syncTime,
+                                        style: AppTextStyles.labelSmall
+                                            .copyWith(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 11,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
                               ],
                             ),
                           ),
@@ -466,7 +525,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                   color: Colors.transparent,
                                   child: AnimatedFillGauge(
                                     fillPercentage: status.fillPercentage,
-                                    isDemo: status.isDemo,
                                     size: 185,
                                   ),
                                 ),
@@ -683,12 +741,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                     name: 'Hand Sensor',
                                     isOk: status.handSensorOk,
                                     reading: status.handSensorOk == false
-                                        ? 'Sensor failure'
+                                        ? 'Hand sensor unavailable'
                                         : status.handDistanceCm != null
                                         ? '${status.handDistanceCm!.toStringAsFixed(1)} cm'
                                         : (status.handSensorOk == true
-                                              ? 'Clear (Far away)'
-                                              : 'Unreported'),
+                                              ? 'Clear'
+                                              : 'Unavailable'),
                                   ),
                                 ),
                                 AppSpacing.gapW12,
@@ -699,7 +757,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                     name: 'Fill Sensor',
                                     isOk: status.fillSensorOk,
                                     reading: status.fillSensorOk == false
-                                        ? 'Sensor failure'
+                                        ? 'Fill sensor unavailable'
                                         : status.fillPercentage != null
                                         ? '${status.fillPercentage!.toStringAsFixed(0)}%'
                                         : 'Unavailable',

@@ -10,7 +10,7 @@ class PulsingStatusDot extends StatefulWidget {
   const PulsingStatusDot({
     super.key,
     required this.connectionStatus,
-    required this.isDemo,
+    this.isDemo = false,
   });
 
   final DeviceConnectionStatus connectionStatus;
@@ -54,11 +54,9 @@ class _PulsingStatusDotState extends State<PulsingStatusDot>
     }
   }
 
-  bool get _isLive =>
-      widget.isDemo || widget.connectionStatus == DeviceConnectionStatus.online;
+  bool get _isLive => widget.connectionStatus == DeviceConnectionStatus.online;
 
   Color get _dotColor {
-    if (widget.isDemo) return AppColors.warning;
     switch (widget.connectionStatus) {
       case DeviceConnectionStatus.online:
         return AppColors.mintGreen;
@@ -74,8 +72,7 @@ class _PulsingStatusDotState extends State<PulsingStatusDot>
   @override
   void didUpdateWidget(covariant PulsingStatusDot oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.connectionStatus != widget.connectionStatus ||
-        oldWidget.isDemo != widget.isDemo) {
+    if (oldWidget.connectionStatus != widget.connectionStatus) {
       if (_isLive) {
         _cyclesCompleted = 0;
         _pulseController.forward(from: 0.0);

@@ -22,14 +22,12 @@ class AnimatedFillGauge extends StatefulWidget {
   const AnimatedFillGauge({
     super.key,
     required this.fillPercentage,
-    this.isDemo = true,
     this.size = 185.0,
     this.strokeWidth = 12.0,
   });
 
   /// Value from 0.0 to 100.0, or null if sensor reading is unavailable.
   final double? fillPercentage;
-  final bool isDemo;
   final double size;
   final double strokeWidth;
 
@@ -129,16 +127,6 @@ class _AnimatedFillGaugeState extends State<AnimatedFillGauge> {
                       fontSize: 11,
                     ),
                   ),
-                  if (widget.isDemo) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      '(Simulated State)',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.warning,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ],
@@ -221,16 +209,6 @@ class _AnimatedFillGaugeState extends State<AnimatedFillGauge> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    if (widget.isDemo) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        'Demo Reading',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textTertiary,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ],

@@ -236,6 +236,11 @@ class HttpDeviceRepository implements DeviceRepository {
   DeviceStatus getCurrentStatus() => _status;
 
   @override
+  Future<void> refreshStatus() async {
+    await pollStatus();
+  }
+
+  @override
   Future<Map<String, dynamic>> checkHealth() async {
     final stopwatch = Stopwatch()..start();
     try {

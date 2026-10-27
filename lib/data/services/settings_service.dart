@@ -42,7 +42,7 @@ class SettingsService {
 
   Future<bool> isDemoMode() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(keyDemoMode) ?? true;
+    return prefs.getBool(keyDemoMode) ?? false;
   }
 
   Future<void> setDemoMode(bool enabled) async {

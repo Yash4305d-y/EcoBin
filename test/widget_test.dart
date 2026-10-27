@@ -16,23 +16,35 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  group('EcoBin Phase 2 App & UI Tests', () {
+  group('EcoBin Production Mode App & UI Tests', () {
     testWidgets(
-      'App launches with Onboarding on first run and enters Demo Mode',
+      'App launches with Onboarding on first run and connects to EcoBin',
       (WidgetTester tester) async {
-        await tester.pumpWidget(const ProviderScope(child: EcoBinApp()));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              deviceRepositoryProvider.overrideWith(
+                (ref) => ref.watch(mockDeviceRepositoryProvider),
+              ),
+            ],
+            child: const EcoBinApp(),
+          ),
+        );
 
         // Wait for Settings to load
         await tester.pumpAndSettle();
 
         // Verify Onboarding Screen is shown
         expect(find.text('Welcome to EcoBin'), findsOneWidget);
-        final demoButton = find.text('Launch Demo Mode (No Hardware)');
-        expect(demoButton, findsOneWidget);
+        final connectButton = find.widgetWithText(
+          FilledButton,
+          'Connect to EcoBin',
+        );
+        expect(connectButton, findsOneWidget);
 
-        // Scroll into view and tap Launch Demo Mode
-        await tester.ensureVisible(demoButton);
-        await tester.tap(demoButton);
+        // Scroll into view and tap Connect to EcoBin
+        await tester.ensureVisible(connectButton);
+        await tester.tap(connectButton);
         await tester.pumpAndSettle();
 
         // Verify transition to main AppNavShell and Dashboard
@@ -52,7 +64,16 @@ void main() {
         SettingsService.keyOnboardingComplete: true,
       });
 
-      await tester.pumpWidget(const ProviderScope(child: EcoBinApp()));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deviceRepositoryProvider.overrideWith(
+              (ref) => ref.watch(mockDeviceRepositoryProvider),
+            ),
+          ],
+          child: const EcoBinApp(),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Verify on Dashboard (Home)
@@ -75,7 +96,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.settings_outlined));
       await tester.pumpAndSettle();
       expect(find.text('Device Settings & Configuration'), findsOneWidget);
-      expect(find.text('Demo Mode (Simulated)'), findsOneWidget);
+      expect(find.text('ESP32 Device IP Address'), findsOneWidget);
 
       // Tap Home tab
       await tester.tap(find.byIcon(Icons.home_outlined));
@@ -92,6 +113,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            deviceRepositoryProvider.overrideWith(
+              (ref) => ref.watch(mockDeviceRepositoryProvider),
+            ),
+          ],
           child: MaterialApp(
             theme: AppTheme.darkTheme,
             home: const AppNavShell(),
@@ -136,26 +162,37 @@ void main() {
       expect(closeLidButtonAfter.onPressed, isNotNull);
     });
 
-    testWidgets(
-      'Onboarding screen saves IP and enters Real Mode when selected',
-      (WidgetTester tester) async {
-        await tester.pumpWidget(const ProviderScope(child: EcoBinApp()));
-        await tester.pumpAndSettle();
+    testWidgets('Onboarding screen saves IP and connects when submitted', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            deviceRepositoryProvider.overrideWith(
+              (ref) => ref.watch(mockDeviceRepositoryProvider),
+            ),
+          ],
+          child: const EcoBinApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        final ipField = find.byType(TextField);
-        expect(ipField, findsOneWidget);
-        await tester.enterText(ipField, '192.168.1.150');
+      final ipField = find.byType(TextField);
+      expect(ipField, findsOneWidget);
+      await tester.enterText(ipField, '192.168.1.150');
 
-        final connectButton = find.text('Save IP & Connect Real ESP32');
-        expect(connectButton, findsOneWidget);
-        await tester.ensureVisible(connectButton);
-        await tester.tap(connectButton);
-        await tester.pumpAndSettle();
+      final connectButton = find.widgetWithText(
+        FilledButton,
+        'Connect to EcoBin',
+      );
+      expect(connectButton, findsOneWidget);
+      await tester.ensureVisible(connectButton);
+      await tester.tap(connectButton);
+      await tester.pumpAndSettle();
 
-        // AppNavShell should now be displayed
-        expect(find.text('EcoBin Dashboard'), findsOneWidget);
-      },
-    );
+      // AppNavShell should now be displayed
+      expect(find.text('EcoBin Dashboard'), findsOneWidget);
+    });
 
     testWidgets('Maintenance mode shows confirmation dialog before switching', (
       WidgetTester tester,
@@ -166,6 +203,11 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            deviceRepositoryProvider.overrideWith(
+              (ref) => ref.watch(mockDeviceRepositoryProvider),
+            ),
+          ],
           child: MaterialApp(
             theme: AppTheme.darkTheme,
             home: const AppNavShell(),
@@ -204,6 +246,11 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
+            overrides: [
+              deviceRepositoryProvider.overrideWith(
+                (ref) => ref.watch(mockDeviceRepositoryProvider),
+              ),
+            ],
             child: MaterialApp(
               theme: AppTheme.darkTheme,
               home: const AppNavShell(),
@@ -266,7 +313,7 @@ void main() {
         // Hand sensor failure indicator on Home
         expect(find.text('FAILURE'), findsOneWidget);
         expect(find.text('HEALTHY'), findsOneWidget);
-        expect(find.textContaining('Sensor failure'), findsWidgets);
+        expect(find.textContaining('Hand sensor unavailable'), findsWidgets);
         expect(find.text('Unavailable'), findsWidgets);
         expect(find.text('0%'), findsNothing);
 
@@ -277,7 +324,7 @@ void main() {
 
         expect(find.text('FAILURE'), findsOneWidget);
         expect(find.text('HEALTHY'), findsOneWidget);
-        expect(find.textContaining('Sensor failure'), findsWidgets);
+        expect(find.textContaining('Hand sensor unavailable'), findsWidgets);
         expect(find.text('Unavailable'), findsWidgets);
         expect(find.text('0%'), findsNothing);
       },

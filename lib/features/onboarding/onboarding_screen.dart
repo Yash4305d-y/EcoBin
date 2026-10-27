@@ -34,12 +34,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  Future<void> _handleContinueDemo() async {
-    await ref.read(settingsProvider.notifier).setDemoMode(true);
-    await ref.read(settingsProvider.notifier).completeOnboarding();
-    widget.onFinished();
-  }
-
   Future<void> _handleSaveAndContinue() async {
     final ip = _ipController.text.trim();
     if (!SettingsService.isValidIpv4(ip)) {
@@ -143,19 +137,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'ESP32 Device Configuration',
+                      'Connect to EcoBin',
                       style: AppTextStyles.titleSmall,
                     ),
                     AppSpacing.gapH4,
                     const Text(
-                      'If you have your ESP32 connected, specify its local IP. You can also explore all features without hardware in Demo Mode.',
+                      'Ensure your phone is connected to the bin\'s Wi-Fi network (or local network), then enter the ESP32 IP address below.',
                       style: AppTextStyles.bodySmall,
                     ),
                     AppSpacing.gapH12,
                     TextField(
                       controller: _ipController,
                       decoration: InputDecoration(
-                        labelText: 'ESP32 Local IP Address',
+                        labelText: 'ESP32 IP Address',
                         hintText: '192.168.4.1',
                         prefixIcon: const Icon(Icons.wifi_rounded, size: 20),
                         errorText: _ipError,
@@ -167,17 +161,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
               AppSpacing.gapH24,
 
-              // Action Buttons
+              // Action Button
               FilledButton.icon(
-                onPressed: _handleContinueDemo,
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('Launch Demo Mode (No Hardware)'),
-              ),
-              AppSpacing.gapH12,
-              OutlinedButton.icon(
                 onPressed: _handleSaveAndContinue,
-                icon: const Icon(Icons.settings_ethernet_rounded),
-                label: const Text('Save IP & Connect Real ESP32'),
+                icon: const Icon(Icons.wifi_rounded),
+                label: const Text('Connect to EcoBin'),
               ),
               AppSpacing.gapH16,
             ],

@@ -5,7 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/widgets/demo_badge.dart';
 import '../../data/providers/device_provider.dart';
 import '../../data/providers/settings_provider.dart';
 import '../../data/services/settings_service.dart';
@@ -57,9 +56,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Saved ESP32 IP: $ip (Persisted via SharedPreferences)',
-          ),
+          content: Text('Saved ESP32 IP: $ip'),
           backgroundColor: AppColors.successContainer,
           duration: const Duration(seconds: 2),
         ),
@@ -69,7 +66,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _handleTestConnection() async {
     final settings = ref.read(settingsProvider);
-    final isDemo = settings.isDemoMode;
     final ip = settings.deviceIp;
 
     showDialog<void>(
@@ -118,9 +114,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isDemo
-                    ? 'Simulated health check completed successfully.'
-                    : 'Real HTTP handshake confirmed with ESP32 at $ip.',
+                'Connection confirmed with EcoBin at $ip.',
                 style: AppTextStyles.bodyMedium,
               ),
               AppSpacing.gapH8,
@@ -177,11 +171,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: AppColors.error,
                 ),
               ),
-              AppSpacing.gapH8,
-              Text('Error: $e', style: AppTextStyles.bodySmall),
-              AppSpacing.gapH8,
               const Text(
-                'Troubleshooting:\n• Ensure ESP32 is powered via 5V.\n• Verify your phone is connected to the same WiFi / SoftAP.\n• Confirm device IP matches your router DHCP table.',
+                'Troubleshooting:\n• Ensure EcoBin is powered on.\n• Verify phone is connected to the same Wi-Fi / SoftAP.\n• Check that the IP address matches your device.',
                 style: AppTextStyles.bodySmall,
               ),
             ],
@@ -199,8 +190,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Device Settings & Configuration')),
       body: SafeArea(
@@ -209,66 +198,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Demo Mode Switch Card
-              Container(
-                padding: AppSpacing.paddingCard,
-                decoration: BoxDecoration(
-                  color: AppColors.slateSurface,
-                  borderRadius: AppRadii.borderRadiusLg,
-                  border: Border.all(
-                    color: settings.isDemoMode
-                        ? AppColors.warning.withValues(alpha: 0.4)
-                        : AppColors.slateOutlineVariant,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.science_outlined,
-                          color: AppColors.warning,
-                          size: 22,
-                        ),
-                        AppSpacing.gapW12,
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                'Demo Mode (Simulated)',
-                                style: AppTextStyles.titleSmall,
-                              ),
-                              Text(
-                                'Simulate telemetry & hardware responses',
-                                style: AppTextStyles.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Switch(
-                          value: settings.isDemoMode,
-                          activeThumbColor: AppColors.mintGreen,
-                          onChanged: (val) {
-                            ref
-                                .read(settingsProvider.notifier)
-                                .setDemoMode(val);
-                          },
-                        ),
-                      ],
-                    ),
-                    if (settings.isDemoMode) ...[
-                      AppSpacing.gapH8,
-                      const DemoBanner(
-                        message: 'Demo Mode is active. Readings, actuation, and events are mocked for safe testing.',
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              AppSpacing.gapH20,
-
               // ESP32 IP Configuration Card
               Container(
                 padding: AppSpacing.paddingCard,
@@ -286,7 +215,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     AppSpacing.gapH4,
                     const Text(
-                      'Stored locally in SharedPreferences. Used for local ESP32 HTTP telemetry and command dispatch.',
+                      'Used for local network communication and command dispatch.',
                       style: AppTextStyles.bodySmall,
                     ),
                     AppSpacing.gapH12,
