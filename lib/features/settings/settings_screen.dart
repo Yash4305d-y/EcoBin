@@ -331,33 +331,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               AppSpacing.gapH20,
 
-              // Diagnostics & Debug Logs Navigation
+              // Diagnostics & Debug Logs Navigation (Secondary Menu Item)
               Container(
-                padding: AppSpacing.paddingCard,
                 decoration: BoxDecoration(
                   color: AppColors.slateSurface,
                   borderRadius: AppRadii.borderRadiusLg,
                   border: Border.all(color: AppColors.slateOutlineVariant),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Diagnostics & Debug Logs',
-                      style: AppTextStyles.titleSmall,
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: AppRadii.borderRadiusLg,
+                  child: InkWell(
+                    onTap: widget.onOpenDebugLogs,
+                    borderRadius: AppRadii.borderRadiusLg,
+                    child: Padding(
+                      padding: AppSpacing.paddingCard,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.sm),
+                            decoration: BoxDecoration(
+                              color: AppColors.slateSurfaceVariant,
+                              borderRadius: AppRadii.borderRadiusSm,
+                            ),
+                            child: const Icon(
+                              Icons.terminal_rounded,
+                              color: AppColors.mintGreen,
+                              size: 20,
+                            ),
+                          ),
+                          AppSpacing.gapW12,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  'Diagnostics & Debug Logs',
+                                  style: AppTextStyles.titleSmall,
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'View real-time HTTP polling and command logs',
+                                  style: AppTextStyles.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: AppColors.textTertiary,
+                          ),
+                        ],
+                      ),
                     ),
-                    AppSpacing.gapH4,
-                    const Text(
-                      'Inspect real-time command dispatch, actuation state events, and network telemetry logs.',
-                      style: AppTextStyles.bodySmall,
-                    ),
-                    AppSpacing.gapH12,
-                    OutlinedButton.icon(
-                      onPressed: widget.onOpenDebugLogs,
-                      icon: const Icon(Icons.terminal_rounded),
-                      label: const Text('Open Debug Logs Viewer'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               AppSpacing.gapH20,

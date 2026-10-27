@@ -1,40 +1,76 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 
 /// Animated radial fill gauge for the EcoBin companion app.
 ///
 /// Follows strict threshold coloring:
-/// - Green (< 50%)
-/// - Yellow/Amber (50% - 80%)
-/// - Red (> 80%)
+/// - Mint Green & Teal accent (< 50%)
+/// - Warning Amber (50% - 80%)
+/// - Error Red (> 80%)
 ///
 /// If [fillPercentage] is null, explicitly displays an "Unavailable" state
 /// without falsifying a 0% reading.
-class AnimatedFillGauge extends StatelessWidget {
+///
+/// Animates smoothly between actual fill values over [AppMotion.gaugeFill],
+/// blurs a low-opacity accent glow behind the dial, and respects system
+/// accessibility reduced-motion settings.
+class AnimatedFillGauge extends StatefulWidget {
   const AnimatedFillGauge({
     super.key,
     required this.fillPercentage,
     this.isDemo = true,
-    this.size = 180.0,
-    this.strokeWidth = 14.0,
+    this.size = 185.0,
+    this.strokeWidth = 12.0,
   });
 
-  /// Value from 0.0 to 100.0, or null if sensor is unavailable.
+  /// Value from 0.0 to 100.0, or null if sensor reading is unavailable.
   final double? fillPercentage;
   final bool isDemo;
   final double size;
   final double strokeWidth;
 
-  Color _getThresholdColor(double percentage) {
+  @override
+  State<AnimatedFillGauge> createState() => _AnimatedFillGaugeState();
+}
+
+class _AnimatedFillGaugeState extends State<AnimatedFillGauge> {
+  double _previousPercentage = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.fillPercentage != null) {
+      _previousPercentage = widget.fillPercentage!.clamp(0.0, 100.0);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedFillGauge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fillPercentage != null && widget.fillPercentage != null) {
+      // Only update previous percentage if the value meaningfully changed (> 0.05)
+      if ((oldWidget.fillPercentage! - widget.fillPercentage!).abs() > 0.05) {
+        _previousPercentage = oldWidget.fillPercentage!.clamp(0.0, 100.0);
+      }
+    } else if (widget.fillPercentage != null) {
+      _previousPercentage = widget.fillPercentage!.clamp(0.0, 100.0);
+    }
+  }
+
+  Color _getBlendedColor(double percentage) {
     if (percentage < 50.0) {
-      return AppColors.mintGreen;
+      final t = (percentage / 50.0).clamp(0.0, 1.0);
+      return Color.lerp(const Color(0xFF00C9A7), AppColors.mintGreen, t)!;
     } else if (percentage <= 80.0) {
-      return AppColors.warning;
+      final t = ((percentage - 50.0) / 30.0).clamp(0.0, 1.0);
+      return Color.lerp(AppColors.mintGreen, AppColors.warning, t)!;
     } else {
-      return AppColors.error;
+      final t = ((percentage - 80.0) / 20.0).clamp(0.0, 1.0);
+      return Color.lerp(AppColors.warning, AppColors.error, t)!;
     }
   }
 
@@ -44,130 +80,61 @@ class AnimatedFillGauge extends StatelessWidget {
     } else if (percentage <= 80.0) {
       return 'Moderate Fill';
     } else {
-      return 'Nearly Full / Action Needed';
+      return 'Nearly Full';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isUnavailable = fillPercentage == null;
+    final isUnavailable = widget.fillPercentage == null;
 
     if (isUnavailable) {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: size,
-              height: size,
-              child: CircularProgressIndicator(
-                value: 1.0,
-                strokeWidth: strokeWidth,
-                color: AppColors.slateOutlineVariant,
-              ),
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.sensors_off_rounded,
-                  size: 32,
-                  color: AppColors.textTertiary,
-                ),
-                AppSpacing.gapH4,
-                Text(
-                  'Unavailable',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                AppSpacing.gapH4,
-                Text(
-                  'Fill Sensor Offline',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-                if (isDemo) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    '(Simulated State)',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.warning,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      );
-    }
-
-    final percentage = fillPercentage!.clamp(0.0, 100.0);
-    final targetColor = _getThresholdColor(percentage);
-
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: percentage),
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeOutCubic,
-      builder: (context, animatedValue, child) {
-        return SizedBox(
-          width: size,
-          height: size,
+      return RepaintBoundary(
+        child: SizedBox(
+          width: widget.size,
+          height: widget.size,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Background track
               SizedBox(
-                width: size,
-                height: size,
+                width: widget.size,
+                height: widget.size,
                 child: CircularProgressIndicator(
                   value: 1.0,
-                  strokeWidth: strokeWidth,
-                  color: AppColors.slateSurfaceVariant,
+                  strokeWidth: widget.strokeWidth,
+                  color: AppColors.slateOutlineVariant.withValues(alpha: 0.6),
                 ),
               ),
-              // Dynamic filled track
-              SizedBox(
-                width: size,
-                height: size,
-                child: CircularProgressIndicator(
-                  value: animatedValue / 100.0,
-                  strokeWidth: strokeWidth,
-                  strokeCap: StrokeCap.round,
-                  color: targetColor,
-                ),
-              ),
-              // Center readout
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const Icon(
+                    Icons.sensors_off_rounded,
+                    size: 28,
+                    color: AppColors.textTertiary,
+                  ),
+                  AppSpacing.gapH4,
                   Text(
-                    '${animatedValue.toStringAsFixed(0)}%',
-                    style: AppTextStyles.displaySmall.copyWith(
+                    'Unavailable',
+                    style: AppTextStyles.titleMedium.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textSecondary,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    _getThresholdLabel(animatedValue),
+                    'Fill Sensor Offline',
                     style: AppTextStyles.labelSmall.copyWith(
-                      color: targetColor,
-                      fontWeight: FontWeight.w600,
+                      color: AppColors.textTertiary,
+                      fontSize: 11,
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  if (isDemo) ...[
-                    AppSpacing.gapH4,
+                  if (widget.isDemo) ...[
+                    const SizedBox(height: 2),
                     Text(
-                      'Demo Reading',
+                      '(Simulated State)',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textTertiary,
+                        color: AppColors.warning,
                         fontSize: 10,
                       ),
                     ),
@@ -176,8 +143,101 @@ class AnimatedFillGauge extends StatelessWidget {
               ),
             ],
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    final targetPercentage = widget.fillPercentage!.clamp(0.0, 100.0);
+    final animationDuration = AppMotion.duration(context, AppMotion.gaugeFill);
+
+    return RepaintBoundary(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: _previousPercentage, end: targetPercentage),
+        duration: animationDuration,
+        curve: AppMotion.enterCurve,
+        builder: (context, animatedValue, child) {
+          final currentColor = _getBlendedColor(animatedValue);
+
+          return SizedBox(
+            width: widget.size,
+            height: widget.size,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Subtle ambient glow behind gauge
+                Container(
+                  width: widget.size * 0.85,
+                  height: widget.size * 0.85,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: currentColor.withValues(alpha: 0.08),
+                        blurRadius: 32,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+                // Subtle background track
+                SizedBox(
+                  width: widget.size,
+                  height: widget.size,
+                  child: CircularProgressIndicator(
+                    value: 1.0,
+                    strokeWidth: widget.strokeWidth,
+                    color: AppColors.slateSurfaceVariant,
+                  ),
+                ),
+                // Dynamic filled track
+                SizedBox(
+                  width: widget.size,
+                  height: widget.size,
+                  child: CircularProgressIndicator(
+                    value: animatedValue / 100.0,
+                    strokeWidth: widget.strokeWidth,
+                    strokeCap: StrokeCap.round,
+                    color: currentColor,
+                  ),
+                ),
+                // Center readout
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${animatedValue.toStringAsFixed(0)}%',
+                      style: AppTextStyles.displaySmall.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _getThresholdLabel(animatedValue),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: currentColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (widget.isDemo) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Demo Reading',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textTertiary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

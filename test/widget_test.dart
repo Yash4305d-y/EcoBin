@@ -37,9 +37,8 @@ void main() {
 
         // Verify transition to main AppNavShell and Dashboard
         expect(find.text('EcoBin Dashboard'), findsOneWidget);
-        expect(find.text('Dashboard'), findsOneWidget);
+        expect(find.text('Home'), findsOneWidget);
         expect(find.text('Controls'), findsOneWidget);
-        expect(find.text('Monitoring'), findsOneWidget);
         expect(find.text('Activity'), findsOneWidget);
         expect(find.text('Settings'), findsOneWidget);
       },
@@ -56,7 +55,7 @@ void main() {
       await tester.pumpWidget(const ProviderScope(child: EcoBinApp()));
       await tester.pumpAndSettle();
 
-      // Verify on Dashboard
+      // Verify on Dashboard (Home)
       expect(find.text('EcoBin Dashboard'), findsOneWidget);
 
       // Tap Controls tab
@@ -65,12 +64,6 @@ void main() {
       expect(find.text('Bin Actuation & Controls'), findsOneWidget);
       expect(find.text('Open Lid'), findsOneWidget);
       expect(find.text('Close Lid'), findsOneWidget);
-
-      // Tap Monitoring tab
-      await tester.tap(find.byIcon(Icons.analytics_outlined));
-      await tester.pumpAndSettle();
-      expect(find.text('Sensor Monitoring & Telemetry'), findsOneWidget);
-      expect(find.text('Ultrasonic Fill Sensor'), findsOneWidget);
 
       // Tap Activity tab
       await tester.tap(find.byIcon(Icons.history_outlined));
@@ -83,6 +76,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Device Settings & Configuration'), findsOneWidget);
       expect(find.text('Demo Mode (Simulated)'), findsOneWidget);
+
+      // Tap Home tab
+      await tester.tap(find.byIcon(Icons.home_outlined));
+      await tester.pumpAndSettle();
+      expect(find.text('EcoBin Dashboard'), findsOneWidget);
     });
 
     testWidgets('Controls screen disables conflicting buttons when executing', (
@@ -214,16 +212,21 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Tap Monitoring tab
-        await tester.tap(
-          find.widgetWithText(NavigationDestination, 'Monitoring'),
-        );
-        await tester.pumpAndSettle();
-
+        // Verify indicators on Home screen
         expect(find.text('Dual Ultrasonic Sensors'), findsOneWidget);
         expect(find.text('Hand Sensor'), findsOneWidget);
         expect(find.text('Fill Sensor'), findsOneWidget);
         expect(find.text('HEALTHY'), findsNWidgets(2));
+
+        // Tap Details to open dedicated Monitoring screen
+        await tester.ensureVisible(find.text('Details'));
+        await tester.tap(find.text('Details'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Sensor Monitoring & Telemetry'), findsOneWidget);
+        expect(find.text('Dual Ultrasonic Sensors'), findsOneWidget);
+        expect(find.text('Hand Sensor'), findsOneWidget);
+        expect(find.text('Fill Sensor'), findsOneWidget);
       },
     );
 
@@ -260,18 +263,21 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Tap Monitoring tab
-        await tester.tap(
-          find.widgetWithText(NavigationDestination, 'Monitoring'),
-        );
-        await tester.pumpAndSettle();
-
-        // Hand sensor failure indicator
+        // Hand sensor failure indicator on Home
         expect(find.text('FAILURE'), findsOneWidget);
         expect(find.text('HEALTHY'), findsOneWidget);
         expect(find.textContaining('Sensor failure'), findsWidgets);
+        expect(find.text('Unavailable'), findsWidgets);
+        expect(find.text('0%'), findsNothing);
 
-        // Fill percentage as Unavailable (never 0%)
+        // Tap Details to verify on full Monitoring screen
+        await tester.ensureVisible(find.text('Details'));
+        await tester.tap(find.text('Details'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('FAILURE'), findsOneWidget);
+        expect(find.text('HEALTHY'), findsOneWidget);
+        expect(find.textContaining('Sensor failure'), findsWidgets);
         expect(find.text('Unavailable'), findsWidgets);
         expect(find.text('0%'), findsNothing);
       },

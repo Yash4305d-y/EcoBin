@@ -2,14 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_motion.dart';
 import '../data/providers/device_provider.dart';
 import '../features/activity/activity_screen.dart';
 import '../features/alerts/alerts_screen.dart';
 import '../features/controls/controls_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/debug_logs/debug_logs_screen.dart';
-import '../features/monitoring/monitoring_screen.dart';
 import '../features/settings/settings_screen.dart';
+
+/// Standard premium page transition with fade and 16px vertical slide.
+PageRouteBuilder<T> createPremiumPageRoute<T>(Widget page) {
+  return PageRouteBuilder<T>(
+    transitionDuration: AppMotion.pageTransition,
+    reverseTransitionDuration: AppMotion.pageTransition,
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curvedAnimation = CurvedAnimation(
+        parent: animation,
+        curve: AppMotion.enterCurve,
+        reverseCurve: AppMotion.stateChangeCurve,
+      );
+
+      return FadeTransition(
+        opacity: curvedAnimation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 0.03), // ~16px slide
+            end: Offset.zero,
+          ).animate(curvedAnimation),
+          child: child,
+        ),
+      );
+    },
+  );
+}
 
 class AppNavShell extends ConsumerStatefulWidget {
   const AppNavShell({super.key});
@@ -47,35 +74,57 @@ class _AppNavShellState extends ConsumerState<AppNavShell>
 
   void _navigateToTab(int index) {
     setState(() {
-      _currentIndex = index.clamp(0, 4);
+      _currentIndex = index.clamp(0, 3);
     });
   }
 
   void _openAlertsScreen() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const AlertsScreen()));
+    Navigator.of(context).push(createPremiumPageRoute(const AlertsScreen()));
   }
 
   void _openDebugLogsScreen() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const DebugLogsScreen()));
+    Navigator.of(context).push(createPremiumPageRoute(const DebugLogsScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
+    final transitionDuration = AppMotion.duration(
+      context,
+      AppMotion.pageTransition,
+    );
+
     final screens = <Widget>[
       DashboardScreen(
         onNavigateToTab: _navigateToTab,
         onOpenAlerts: _openAlertsScreen,
       ),
       const ControlsScreen(),
-      const MonitoringScreen(),
       const ActivityScreen(),
       SettingsScreen(onOpenDebugLogs: _openDebugLogsScreen),
     ];
 
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: screens),
+      body: AnimatedSwitcher(
+        duration: transitionDuration,
+        switchInCurve: AppMotion.enterCurve,
+        switchOutCurve: AppMotion.stateChangeCurve,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.0, 0.025), // ~16px subtle vertical motion
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(_currentIndex),
+          child: screens[_currentIndex],
+        ),
+      ),
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           backgroundColor: AppColors.slateSurface,
@@ -107,19 +156,14 @@ class _AppNavShellState extends ConsumerState<AppNavShell>
           height: 68,
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard',
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Home',
             ),
             NavigationDestination(
               icon: Icon(Icons.tune_outlined),
               selectedIcon: Icon(Icons.tune_rounded),
               label: 'Controls',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics_rounded),
-              label: 'Monitoring',
             ),
             NavigationDestination(
               icon: Icon(Icons.history_outlined),

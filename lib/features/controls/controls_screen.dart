@@ -231,8 +231,10 @@ class ControlsScreen extends ConsumerWidget {
                       message: 'Simulated Hardware: Commands execute on MockDeviceRepository with realistic latency.',
                     ),
 
-                  // Current State Summary Card
-                  Container(
+                  // Current State Summary Card with smooth transition
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
                     padding: AppSpacing.paddingCard,
                     decoration: BoxDecoration(
                       color: AppColors.slateSurface,
@@ -241,7 +243,8 @@ class ControlsScreen extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        Container(
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
                           padding: const EdgeInsets.all(AppSpacing.md),
                           decoration: BoxDecoration(
                             color: isLidMoving
@@ -291,6 +294,116 @@ class ControlsScreen extends ConsumerWidget {
                               color: AppColors.mintGreen,
                             ),
                           ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.gapH12,
+
+                  // Compact Sensor Overview
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.slateSurfaceCard,
+                      borderRadius: AppRadii.borderRadiusMd,
+                      border: Border.all(color: AppColors.slateOutlineVariant),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.sensors_rounded,
+                          size: 16,
+                          color: AppColors.mintGreen,
+                        ),
+                        AppSpacing.gapW8,
+                        Text(
+                          'Sensors:',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        AppSpacing.gapW8,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (status.handSensorOk == true
+                                        ? AppColors.mintGreen
+                                        : status.handSensorOk == false
+                                        ? AppColors.error
+                                        : AppColors.textTertiary)
+                                    .withValues(alpha: 0.15),
+                            borderRadius: AppRadii.borderRadiusXs,
+                          ),
+                          child: Text(
+                            'Hand: ${status.handSensorOk == true
+                                ? "OK"
+                                : status.handSensorOk == false
+                                ? "FAIL"
+                                : "N/A"}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: status.handSensorOk == true
+                                  ? AppColors.mintGreen
+                                  : status.handSensorOk == false
+                                  ? AppColors.error
+                                  : AppColors.textTertiary,
+                            ),
+                          ),
+                        ),
+                        AppSpacing.gapW8,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (status.fillSensorOk == true
+                                        ? AppColors.mintGreen
+                                        : status.fillSensorOk == false
+                                        ? AppColors.error
+                                        : AppColors.textTertiary)
+                                    .withValues(alpha: 0.15),
+                            borderRadius: AppRadii.borderRadiusXs,
+                          ),
+                          child: Text(
+                            'Fill: ${status.fillSensorOk == true
+                                ? "OK"
+                                : status.fillSensorOk == false
+                                ? "FAIL"
+                                : "N/A"}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: status.fillSensorOk == true
+                                  ? AppColors.mintGreen
+                                  : status.fillSensorOk == false
+                                  ? AppColors.error
+                                  : AppColors.textTertiary,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          status.fillPercentage != null
+                              ? '${status.fillPercentage!.toStringAsFixed(0)}% depth'
+                              : 'Unavailable',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: status.fillPercentage != null
+                                ? AppColors.textPrimary
+                                : AppColors.textTertiary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
                       ],
                     ),
                   ),
