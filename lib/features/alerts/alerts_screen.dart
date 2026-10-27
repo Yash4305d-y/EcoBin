@@ -54,9 +54,10 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const DemoBanner(
-                message: 'Sample Alerts: Displayed for in-app UI testing only. Remote push notification dispatch is not active.',
-              ),
+              if (statusAsync.value?.isDemo ?? true)
+                const DemoBanner(
+                  message: 'Sample Alerts: Displayed for in-app UI testing only. Remote push notification dispatch is not active.',
+                ),
 
               // Filter Chips
               Row(
@@ -223,7 +224,30 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                         alert.title,
                                         style: AppTextStyles.titleSmall,
                                       ),
-                                      const DemoBadge(text: 'SAMPLE'),
+                                      if (alert.isDemo)
+                                        const DemoBadge(text: 'SAMPLE')
+                                      else
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.xs,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.mintGreenContainer,
+                                            borderRadius:
+                                                AppRadii.borderRadiusXs,
+                                          ),
+                                          child: Text(
+                                            'SYSTEM',
+                                            style: AppTextStyles.labelSmall
+                                                .copyWith(
+                                                  color: AppColors
+                                                      .onMintGreenContainer,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 9,
+                                                ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                   AppSpacing.gapH4,
@@ -275,7 +299,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                     AppSpacing.gapW12,
                     Expanded(
                       child: Text(
-                        'Push notifications (FCM / Background daemon) are out of scope for Phase 2. Alerts operate within the in-app telemetry lifecycle only.',
+                        'Push notifications are out of scope for local ESP32 integration. Alerts operate within the in-app telemetry lifecycle only.',
                         style: AppTextStyles.bodySmall,
                       ),
                     ),

@@ -53,6 +53,9 @@ class ActivityScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final eventsAsync = ref.watch(deviceEventsProvider);
+    final statusAsync = ref.watch(deviceStatusProvider);
+    final isDemo = statusAsync.value?.isDemo ?? true;
+    final todayCount = statusAsync.value?.todayOpenings ?? 0;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bin Activity & History')),
@@ -62,9 +65,36 @@ class ActivityScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const DemoBanner(
-                message: 'Simulated Demo Events: Local SQLite database persistence will be integrated in a subsequent phase.',
-              ),
+              if (isDemo)
+                const DemoBanner(
+                  message: 'Simulated Demo Events: Local SQLite database persistence will be integrated in a subsequent phase.',
+                )
+              else
+                Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: AppSpacing.paddingCard,
+                  decoration: BoxDecoration(
+                    color: AppColors.slateSurfaceCard,
+                    borderRadius: AppRadii.borderRadiusMd,
+                    border: Border.all(color: AppColors.slateOutlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.mintGreen,
+                        size: 20,
+                      ),
+                      AppSpacing.gapW12,
+                      Expanded(
+                        child: Text(
+                          'Local Activity Persistence: Event history will be persisted in SQLite in a subsequent phase. Live opening count ($todayCount) is reported directly by the ESP32.',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
               // Summary Stats Row
               Row(
@@ -72,8 +102,10 @@ class ActivityScreen extends ConsumerWidget {
                   Expanded(
                     child: _SummaryBox(
                       title: "Today's Usage",
-                      stat: '18 Openings',
-                      detail: 'Peak: 1:15 PM – 2:00 PM',
+                      stat: '$todayCount Openings',
+                      detail: isDemo
+                          ? 'Peak: 1:15 PM – 2:00 PM'
+                          : 'ESP32 hardware counter',
                       icon: Icons.today_rounded,
                     ),
                   ),
@@ -81,8 +113,10 @@ class ActivityScreen extends ConsumerWidget {
                   Expanded(
                     child: _SummaryBox(
                       title: 'Weekly Total',
-                      stat: '114 Openings',
-                      detail: 'Avg: 16.2 / day',
+                      stat: isDemo ? '114 Openings' : 'N/A',
+                      detail: isDemo
+                          ? 'Avg: 16.2 / day'
+                          : 'Requires SQLite persistence',
                       icon: Icons.date_range_rounded,
                     ),
                   ),
@@ -93,9 +127,32 @@ class ActivityScreen extends ConsumerWidget {
               // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text('Recent Events Log', style: AppTextStyles.titleMedium),
-                  DemoBadge(text: 'MOCK HISTORY'),
+                children: [
+                  const Text(
+                    'Recent Events Log',
+                    style: AppTextStyles.titleMedium,
+                  ),
+                  if (isDemo)
+                    const DemoBadge(text: 'MOCK HISTORY')
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.mintGreenContainer,
+                        borderRadius: AppRadii.borderRadiusXs,
+                      ),
+                      child: Text(
+                        'REAL EVENT STREAM',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.onMintGreenContainer,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
                 ],
               ),
               AppSpacing.gapH12,
@@ -113,10 +170,11 @@ class ActivityScreen extends ConsumerWidget {
                         color: AppColors.slateSurface,
                         borderRadius: AppRadii.borderRadiusLg,
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
-                          'No recent activity recorded.',
+                          isDemo ? 'No recent activity recorded.' : 'No events recorded during this session.\nActuate the bin lid via Controls to record live events.',
                           style: AppTextStyles.bodyMedium,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     );

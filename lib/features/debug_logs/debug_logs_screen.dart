@@ -35,17 +35,66 @@ class DebugLogsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final logsAsync = ref.watch(debugLogsProvider);
+    final statusAsync = ref.watch(deviceStatusProvider);
+    final isDemo = statusAsync.value?.isDemo ?? true;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Simulated Debug Logs'),
+        title: Text(
+          isDemo ? 'Debug Logs (Demo Mode)' : 'Network & Diagnostic Logs',
+        ),
         actions: [
           IconButton(
             tooltip: 'Clear Logs',
             icon: const Icon(Icons.delete_sweep_rounded),
-            onPressed: () {
-              ref.read(deviceRepositoryProvider).clearDebugLogs();
-              ref.invalidate(debugLogsProvider);
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (dialogCtx) => AlertDialog(
+                  backgroundColor: AppColors.slateSurface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadii.borderRadiusLg,
+                    side: const BorderSide(
+                      color: AppColors.slateOutlineVariant,
+                    ),
+                  ),
+                  title: Row(
+                    children: const [
+                      Icon(
+                        Icons.delete_sweep_rounded,
+                        color: AppColors.warning,
+                      ),
+                      AppSpacing.gapW8,
+                      Text(
+                        'Clear Debug Logs?',
+                        style: AppTextStyles.titleMedium,
+                      ),
+                    ],
+                  ),
+                  content: const Text(
+                    'This will clear all in-memory diagnostic trace entries recorded during this session.',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogCtx).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                      ),
+                      onPressed: () => Navigator.of(dialogCtx).pop(true),
+                      child: const Text('Clear Trace'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true) {
+                ref.read(deviceRepositoryProvider).clearDebugLogs();
+                ref.invalidate(debugLogsProvider);
+              }
             },
           ),
           IconButton(
@@ -61,9 +110,36 @@ class DebugLogsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const DemoBanner(
-                message: 'Simulated Log Stream: Records app action dispatches and mock state transitions. No real HTTP wire requests are fabricated.',
-              ),
+              if (isDemo)
+                const DemoBanner(
+                  message: 'Simulated Log Stream: Records app action dispatches and mock state transitions. No real HTTP wire requests are fabricated.',
+                )
+              else
+                Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  padding: AppSpacing.paddingCard,
+                  decoration: BoxDecoration(
+                    color: AppColors.slateSurfaceCard,
+                    borderRadius: AppRadii.borderRadiusMd,
+                    border: Border.all(color: AppColors.slateOutlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.lan_rounded,
+                        color: AppColors.mintGreen,
+                        size: 20,
+                      ),
+                      AppSpacing.gapW12,
+                      Expanded(
+                        child: Text(
+                          'Live Wire Diagnostics: Records raw HTTP endpoint transactions, latency, response codes, and network connection state changes.',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               AppSpacing.gapH8,
 
               Row(

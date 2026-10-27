@@ -286,7 +286,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     AppSpacing.gapH4,
                     const Text(
-                      'Stored locally in SharedPreferences. Used for future Phase 3 local HTTP telemetry calls.',
+                      'Stored locally in SharedPreferences. Used for local ESP32 HTTP telemetry and command dispatch.',
                       style: AppTextStyles.bodySmall,
                     ),
                     AppSpacing.gapH12,
@@ -348,7 +348,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     AppSpacing.gapH4,
                     const Text(
-                      'Inspect real-time command dispatch, actuation state events, and simulated telemetry logs.',
+                      'Inspect real-time command dispatch, actuation state events, and network telemetry logs.',
                       style: AppTextStyles.bodySmall,
                     ),
                     AppSpacing.gapH12,

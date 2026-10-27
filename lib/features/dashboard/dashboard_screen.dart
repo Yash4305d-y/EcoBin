@@ -233,7 +233,9 @@ class DashboardScreen extends ConsumerWidget {
                           icon: Icons.repeat_rounded,
                           label: "Today's Openings",
                           value: '${status.todayOpenings}',
-                          subtitle: 'Simulated counter',
+                          subtitle: status.isDemo
+                              ? 'Simulated counter'
+                              : 'ESP32 hardware counter',
                         ),
                       ),
                       AppSpacing.gapW12,
@@ -241,8 +243,14 @@ class DashboardScreen extends ConsumerWidget {
                         child: _StatCard(
                           icon: Icons.access_time_rounded,
                           label: 'Last Telemetry',
-                          value: _formatTime(status.lastUpdated),
-                          subtitle: 'Simulated ping',
+                          value: status.lastSuccessfulCommunication != null
+                              ? _formatTime(status.lastSuccessfulCommunication!)
+                              : _formatTime(status.lastUpdated),
+                          subtitle: status.isDemo
+                              ? 'Simulated ping'
+                              : (status.lastSuccessfulCommunication != null
+                                    ? 'Live HTTP poll'
+                                    : 'Awaiting first poll'),
                         ),
                       ),
                     ],

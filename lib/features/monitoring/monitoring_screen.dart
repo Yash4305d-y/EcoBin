@@ -55,7 +55,26 @@ class MonitoringScreen extends ConsumerWidget {
                                 style: AppTextStyles.titleMedium,
                               ),
                               if (status.isDemo)
-                                const DemoBadge(text: 'SIMULATED DATA'),
+                                const DemoBadge(text: 'SIMULATED DATA')
+                              else
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.sm,
+                                    vertical: AppSpacing.xs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.mintGreenContainer,
+                                    borderRadius: AppRadii.borderRadiusXs,
+                                  ),
+                                  child: Text(
+                                    'REAL SENSOR',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: AppColors.onMintGreenContainer,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                           AppSpacing.gapH24,
@@ -201,8 +220,10 @@ class MonitoringScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Hardware Probe Metrics (Simulated)',
+                        Text(
+                          status.isDemo
+                              ? 'Hardware Probe Metrics (Simulated)'
+                              : 'ESP32 Ultrasonic Sensor Metrics (HC-SR04)',
                           style: AppTextStyles.titleSmall,
                         ),
                         AppSpacing.gapH12,

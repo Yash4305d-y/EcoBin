@@ -40,15 +40,23 @@ class ControlsScreen extends ConsumerWidget {
     try {
       await ref.read(deviceRepositoryProvider).openLid();
       if (context.mounted) {
+        final currentLid = ref
+            .read(deviceRepositoryProvider)
+            .getCurrentStatus()
+            .lidState;
+        final message = status.isDemo
+            ? 'Simulated Action: Servo opened lid (Demo Mode).'
+            : (currentLid == LidState.open
+                  ? 'HTTP Command Confirmed: Lid is OPEN.'
+                  : 'HTTP Command Accepted: Awaiting physical servo confirmation from ESP32.');
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              status.isDemo
-                  ? 'Simulated Action: Servo opened lid (Demo Mode).'
-                  : 'HTTP Command Sent: POST /api/lid/open -> Confirmed.',
-            ),
-            backgroundColor: AppColors.successContainer,
-            duration: const Duration(seconds: 2),
+            content: Text(message),
+            backgroundColor: currentLid == LidState.open || status.isDemo
+                ? AppColors.successContainer
+                : AppColors.slateSurfaceVariant,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -83,15 +91,23 @@ class ControlsScreen extends ConsumerWidget {
     try {
       await ref.read(deviceRepositoryProvider).closeLid();
       if (context.mounted) {
+        final currentLid = ref
+            .read(deviceRepositoryProvider)
+            .getCurrentStatus()
+            .lidState;
+        final message = status.isDemo
+            ? 'Simulated Action: Servo closed lid (Demo Mode).'
+            : (currentLid == LidState.closed
+                  ? 'HTTP Command Confirmed: Lid is CLOSED.'
+                  : 'HTTP Command Accepted: Awaiting physical servo confirmation from ESP32.');
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              status.isDemo
-                  ? 'Simulated Action: Servo closed lid (Demo Mode).'
-                  : 'HTTP Command Sent: POST /api/lid/close -> Confirmed.',
-            ),
-            backgroundColor: AppColors.slateSurfaceVariant,
-            duration: const Duration(seconds: 2),
+            content: Text(message),
+            backgroundColor: currentLid == LidState.closed || status.isDemo
+                ? AppColors.slateSurfaceVariant
+                : AppColors.warningContainer,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -117,6 +133,48 @@ class ControlsScreen extends ConsumerWidget {
   ) async {
     final pending = ref.read(isCommandPendingProvider);
     if (pending) return;
+
+    if (mode == OperatingMode.maintenance) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          backgroundColor: AppColors.slateSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadii.borderRadiusLg,
+            side: const BorderSide(color: AppColors.warning),
+          ),
+          title: Row(
+            children: const [
+              Icon(Icons.build_rounded, color: AppColors.warning),
+              AppSpacing.gapW8,
+              Text(
+                'Enable Maintenance Mode?',
+                style: AppTextStyles.titleMedium,
+              ),
+            ],
+          ),
+          content: const Text(
+            'Maintenance Mode locks the bin lid closed and halts automatic proximity actuation routines. This prevents accidental opening while replacing waste bags or cleaning.',
+            style: AppTextStyles.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.warning),
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text(
+                'Lock & Enable',
+                style: TextStyle(color: AppColors.onWarningContainer),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
 
     ref.read(isCommandPendingProvider.notifier).setPending(true);
     try {
@@ -339,76 +397,77 @@ class ControlsScreen extends ConsumerWidget {
                     onTap: () =>
                         _handleSetMode(context, ref, OperatingMode.maintenance),
                   ),
-                  AppSpacing.gapH24,
-
-                  // Interactive Sandbox: Test Sensor Thresholds
-                  Container(
-                    padding: AppSpacing.paddingCard,
-                    decoration: BoxDecoration(
-                      color: AppColors.slateSurfaceCard,
-                      borderRadius: AppRadii.borderRadiusLg,
-                      border: Border.all(
-                        color: AppColors.warning.withValues(alpha: 0.4),
+                  // Interactive Sandbox: Test Sensor Thresholds (Demo Mode Only)
+                  if (status.isDemo) ...[
+                    AppSpacing.gapH24,
+                    Container(
+                      padding: AppSpacing.paddingCard,
+                      decoration: BoxDecoration(
+                        color: AppColors.slateSurfaceCard,
+                        borderRadius: AppRadii.borderRadiusLg,
+                        border: Border.all(
+                          color: AppColors.warning.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.science_outlined,
+                                color: AppColors.warning,
+                                size: 20,
+                              ),
+                              AppSpacing.gapW8,
+                              Text(
+                                'Demo Sandbox: Sensor Simulation',
+                                style: AppTextStyles.titleSmall,
+                              ),
+                              Spacer(),
+                              DemoBadge(),
+                            ],
+                          ),
+                          AppSpacing.gapH8,
+                          const Text(
+                            'Test how the UI, gauge, and alerts respond to various capacity thresholds and offline states.',
+                            style: AppTextStyles.bodySmall,
+                          ),
+                          AppSpacing.gapH12,
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              _QuickPresetButton(
+                                label: 'Low (25%)',
+                                onPressed: () => ref
+                                    .read(deviceRepositoryProvider)
+                                    .setFillPercentage(25.0),
+                              ),
+                              _QuickPresetButton(
+                                label: 'Moderate (64%)',
+                                onPressed: () => ref
+                                    .read(deviceRepositoryProvider)
+                                    .setFillPercentage(64.0),
+                              ),
+                              _QuickPresetButton(
+                                label: 'High (88%)',
+                                onPressed: () => ref
+                                    .read(deviceRepositoryProvider)
+                                    .setFillPercentage(88.0),
+                              ),
+                              _QuickPresetButton(
+                                label: 'Sensor Offline (Null)',
+                                onPressed: () => ref
+                                    .read(deviceRepositoryProvider)
+                                    .setFillPercentage(null),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.science_outlined,
-                              color: AppColors.warning,
-                              size: 20,
-                            ),
-                            AppSpacing.gapW8,
-                            Text(
-                              'Demo Sandbox: Sensor Simulation',
-                              style: AppTextStyles.titleSmall,
-                            ),
-                            Spacer(),
-                            DemoBadge(),
-                          ],
-                        ),
-                        AppSpacing.gapH8,
-                        const Text(
-                          'Test how the UI, gauge, and alerts respond to various capacity thresholds and offline states.',
-                          style: AppTextStyles.bodySmall,
-                        ),
-                        AppSpacing.gapH12,
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: [
-                            _QuickPresetButton(
-                              label: 'Low (25%)',
-                              onPressed: () => ref
-                                  .read(deviceRepositoryProvider)
-                                  .setFillPercentage(25.0),
-                            ),
-                            _QuickPresetButton(
-                              label: 'Moderate (64%)',
-                              onPressed: () => ref
-                                  .read(deviceRepositoryProvider)
-                                  .setFillPercentage(64.0),
-                            ),
-                            _QuickPresetButton(
-                              label: 'High (88%)',
-                              onPressed: () => ref
-                                  .read(deviceRepositoryProvider)
-                                  .setFillPercentage(88.0),
-                            ),
-                            _QuickPresetButton(
-                              label: 'Sensor Offline (Null)',
-                              onPressed: () => ref
-                                  .read(deviceRepositoryProvider)
-                                  .setFillPercentage(null),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ],
               ),
             );

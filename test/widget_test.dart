@@ -135,6 +135,65 @@ void main() {
       );
       expect(closeLidButtonAfter.onPressed, isNotNull);
     });
+
+    testWidgets(
+      'Onboarding screen saves IP and enters Real Mode when selected',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(const ProviderScope(child: EcoBinApp()));
+        await tester.pumpAndSettle();
+
+        final ipField = find.byType(TextField);
+        expect(ipField, findsOneWidget);
+        await tester.enterText(ipField, '192.168.1.150');
+
+        final connectButton = find.text('Save IP & Connect Real ESP32');
+        expect(connectButton, findsOneWidget);
+        await tester.ensureVisible(connectButton);
+        await tester.tap(connectButton);
+        await tester.pumpAndSettle();
+
+        // AppNavShell should now be displayed
+        expect(find.text('EcoBin Dashboard'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Maintenance mode shows confirmation dialog before switching', (
+      WidgetTester tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        SettingsService.keyOnboardingComplete: true,
+      });
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const AppNavShell(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Navigate to controls
+      await tester.tap(find.byIcon(Icons.tune_outlined));
+      await tester.pumpAndSettle();
+
+      // Tap Maintenance Mode
+      final maintenanceTile = find.text('Maintenance Mode');
+      await tester.ensureVisible(maintenanceTile);
+      await tester.tap(maintenanceTile);
+      await tester.pumpAndSettle();
+
+      // Verify dialog appears
+      expect(find.text('Enable Maintenance Mode?'), findsOneWidget);
+      expect(find.text('Lock & Enable'), findsOneWidget);
+
+      // Cancel dialog
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enable Maintenance Mode?'), findsNothing);
+    });
   });
 
   group('MockDeviceRepository & Architecture Unit Tests', () {

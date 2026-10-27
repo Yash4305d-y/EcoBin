@@ -51,6 +51,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     setState(() => _ipError = null);
     await ref.read(settingsProvider.notifier).updateDeviceIp(ip);
+    await ref.read(settingsProvider.notifier).setDemoMode(false);
     await ref.read(settingsProvider.notifier).completeOnboarding();
     widget.onFinished();
   }
@@ -176,7 +177,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               OutlinedButton.icon(
                 onPressed: _handleSaveAndContinue,
                 icon: const Icon(Icons.settings_ethernet_rounded),
-                label: const Text('Save IP & Enter App'),
+                label: const Text('Save IP & Connect Real ESP32'),
               ),
               AppSpacing.gapH16,
             ],
