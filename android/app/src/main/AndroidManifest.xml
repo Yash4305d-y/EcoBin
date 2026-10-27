@@ -1,6 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internet permission required for communicating with ESP32 device / network services -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Cleartext HTTP note: Local ESP32 communication on local subnets (e.g., 192.168.4.1 or LAN IP)
+         uses cleartext HTTP without TLS/SSL certificates. In future phases when connecting to the ESP32
+         on the local network, either a targeted network_security_config or cleartext configuration will
+         permit communication with local device endpoints without compromising general security. -->
     <application
-        android:label="ecobin"
+        android:label="EcoBin"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -9,6 +16,7 @@
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
