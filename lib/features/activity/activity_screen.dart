@@ -1,0 +1,285 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_radii.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/demo_badge.dart';
+import '../../data/models/device_event.dart';
+import '../../data/providers/device_provider.dart';
+
+class ActivityScreen extends ConsumerWidget {
+  const ActivityScreen({super.key});
+
+  String _formatRelativeTime(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  IconData _getEventIcon(DeviceEventType type) {
+    switch (type) {
+      case DeviceEventType.lidOpened:
+        return Icons.arrow_upward_rounded;
+      case DeviceEventType.lidClosed:
+        return Icons.arrow_downward_rounded;
+      case DeviceEventType.fillWarning:
+        return Icons.warning_amber_rounded;
+      case DeviceEventType.modeChanged:
+        return Icons.tune_rounded;
+      case DeviceEventType.maintenance:
+        return Icons.build_rounded;
+    }
+  }
+
+  Color _getEventColor(DeviceEventType type) {
+    switch (type) {
+      case DeviceEventType.lidOpened:
+        return AppColors.mintGreen;
+      case DeviceEventType.lidClosed:
+        return AppColors.info;
+      case DeviceEventType.fillWarning:
+        return AppColors.warning;
+      case DeviceEventType.modeChanged:
+        return AppColors.textPrimary;
+      case DeviceEventType.maintenance:
+        return AppColors.error;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(deviceEventsProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Bin Activity & History')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: AppSpacing.paddingScreen,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const DemoBanner(
+                message: 'Simulated Demo Events: Local SQLite database persistence will be integrated in a subsequent phase.',
+              ),
+
+              // Summary Stats Row
+              Row(
+                children: [
+                  Expanded(
+                    child: _SummaryBox(
+                      title: "Today's Usage",
+                      stat: '18 Openings',
+                      detail: 'Peak: 1:15 PM – 2:00 PM',
+                      icon: Icons.today_rounded,
+                    ),
+                  ),
+                  AppSpacing.gapW12,
+                  Expanded(
+                    child: _SummaryBox(
+                      title: 'Weekly Total',
+                      stat: '114 Openings',
+                      detail: 'Avg: 16.2 / day',
+                      icon: Icons.date_range_rounded,
+                    ),
+                  ),
+                ],
+              ),
+              AppSpacing.gapH24,
+
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Text('Recent Events Log', style: AppTextStyles.titleMedium),
+                  DemoBadge(text: 'MOCK HISTORY'),
+                ],
+              ),
+              AppSpacing.gapH12,
+
+              eventsAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppColors.mintGreen),
+                ),
+                error: (err, _) => Center(child: Text('Error: $err')),
+                data: (events) {
+                  if (events.isEmpty) {
+                    return Container(
+                      padding: AppSpacing.paddingCard,
+                      decoration: BoxDecoration(
+                        color: AppColors.slateSurface,
+                        borderRadius: AppRadii.borderRadiusLg,
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'No recent activity recorded.',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: events.length,
+                    separatorBuilder: (context, index) => AppSpacing.gapH8,
+                    itemBuilder: (context, index) {
+                      final event = events[index];
+                      final color = _getEventColor(event.type);
+
+                      return Container(
+                        padding: AppSpacing.paddingCard,
+                        decoration: BoxDecoration(
+                          color: AppColors.slateSurface,
+                          borderRadius: AppRadii.borderRadiusMd,
+                          border: Border.all(
+                            color: AppColors.slateOutlineVariant,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.15),
+                                borderRadius: AppRadii.borderRadiusSm,
+                              ),
+                              child: Icon(
+                                _getEventIcon(event.type),
+                                color: color,
+                                size: 18,
+                              ),
+                            ),
+                            AppSpacing.gapW12,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        event.title,
+                                        style: AppTextStyles.titleSmall,
+                                      ),
+                                      Text(
+                                        _formatRelativeTime(event.timestamp),
+                                        style: AppTextStyles.labelSmall
+                                            .copyWith(
+                                              color: AppColors.textTertiary,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  AppSpacing.gapH4,
+                                  Text(
+                                    event.description,
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+              AppSpacing.gapH24,
+
+              // Explicit Persistence Notice
+              Container(
+                padding: AppSpacing.paddingCard,
+                decoration: BoxDecoration(
+                  color: AppColors.slateSurfaceCard,
+                  borderRadius: AppRadii.borderRadiusLg,
+                  border: Border.all(color: AppColors.slateOutlineVariant),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.storage_rounded,
+                      color: AppColors.info,
+                      size: 22,
+                    ),
+                    AppSpacing.gapW12,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'SQLite Persistence Scope',
+                            style: AppTextStyles.titleSmall,
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Events are currently held in-memory via MockDeviceRepository for UI preview. SQLite database integration will follow in a subsequent phase.',
+                            style: AppTextStyles.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryBox extends StatelessWidget {
+  const _SummaryBox({
+    required this.title,
+    required this.stat,
+    required this.detail,
+    required this.icon,
+  });
+
+  final String title;
+  final String stat;
+  final String detail;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: AppSpacing.paddingCard,
+      decoration: BoxDecoration(
+        color: AppColors.slateSurface,
+        borderRadius: AppRadii.borderRadiusLg,
+        border: Border.all(color: AppColors.slateOutlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: AppColors.mintGreen),
+              AppSpacing.gapW8,
+              Text(title, style: AppTextStyles.labelSmall),
+            ],
+          ),
+          AppSpacing.gapH8,
+          Text(
+            stat,
+            style: AppTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(detail, style: AppTextStyles.bodySmall),
+        ],
+      ),
+    );
+  }
+}

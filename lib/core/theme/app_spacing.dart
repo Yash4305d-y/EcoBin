@@ -31,6 +31,7 @@ abstract final class AppSpacing {
   static const EdgeInsets paddingModal = EdgeInsets.all(xxl);
 
   // Horizontal Spacers
+  static const SizedBox gapW2 = SizedBox(width: xxs);
   static const SizedBox gapW4 = SizedBox(width: xs);
   static const SizedBox gapW8 = SizedBox(width: sm);
   static const SizedBox gapW12 = SizedBox(width: md);
@@ -40,6 +41,7 @@ abstract final class AppSpacing {
   static const SizedBox gapW32 = SizedBox(width: xxxl);
 
   // Vertical Spacers
+  static const SizedBox gapH2 = SizedBox(height: xxs);
   static const SizedBox gapH4 = SizedBox(height: xs);
   static const SizedBox gapH8 = SizedBox(height: sm);
   static const SizedBox gapH12 = SizedBox(height: md);
