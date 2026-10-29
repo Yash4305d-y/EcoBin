@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/constants/app_constants.dart';
 
 import '../models/app_alert.dart';
 import '../models/debug_log_entry.dart';
@@ -8,6 +11,7 @@ import '../repositories/device_repository.dart';
 import '../repositories/http_device_repository.dart';
 import '../repositories/mock_device_repository.dart';
 import '../services/device_api_service.dart';
+import 'demo_mode_provider.dart';
 import 'settings_provider.dart';
 
 /// Provides the low-level HTTP API client.
@@ -47,9 +51,29 @@ final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
 });
 
 /// Streams real-time / polled updates of the [DeviceStatus].
+///
+/// If developer-only Demo Mode is active in debug mode, it overlays
+/// the simulated fill percentage while preserving authentic connection status
+/// and hardware states.
 final deviceStatusProvider = StreamProvider<DeviceStatus>((ref) {
   final repository = ref.watch(deviceRepositoryProvider);
-  return repository.watchStatus();
+  final demoFill = ref.watch(fillDemoOverrideProvider);
+
+  return repository.watchStatus().map((status) {
+    if (demoFill != null && !kReleaseMode) {
+      final simulatedDepth =
+          AppConstants.defaultEmptyDistanceCm -
+          (demoFill / 100.0) *
+              (AppConstants.defaultEmptyDistanceCm -
+                  AppConstants.defaultFullDistanceCm);
+
+      return status.copyWith(
+        fillPercentage: () => demoFill,
+        fillDistanceCm: () => double.parse(simulatedDepth.toStringAsFixed(1)),
+      );
+    }
+    return status;
+  });
 });
 
 /// Manages whether a hardware command is currently executing.

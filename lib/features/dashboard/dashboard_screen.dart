@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,15 +9,16 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/animated_fill_gauge.dart';
 import '../../core/widgets/app_card.dart';
-import '../../core/widgets/pressable_scale.dart';
 import '../../core/widgets/pulsing_status_dot.dart';
 import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_chip.dart';
 import '../../data/models/device_connection_state.dart';
 import '../../data/models/device_status.dart';
+import '../../data/providers/demo_mode_provider.dart';
 import '../../data/providers/device_provider.dart';
 import '../../navigation/app_nav_shell.dart';
 import '../monitoring/monitoring_screen.dart';
+import 'widgets/fill_demo_sheet.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({
@@ -75,74 +77,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return '$hour:$minute';
   }
 
-  Future<void> _handlePrimaryLidAction(
-    BuildContext context,
-    DeviceStatus status,
-  ) async {
-    final pending = ref.read(isCommandPendingProvider);
-    if (pending || status.lidState == LidState.moving) return;
-
-    if (status.mode == OperatingMode.maintenance) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lid is locked in Maintenance Mode.'),
-          backgroundColor: AppColors.warning,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    final repo = ref.read(deviceRepositoryProvider);
-    final isCurrentlyOpen = status.lidState == LidState.open;
-
-    ref.read(isCommandPendingProvider.notifier).setPending(true);
-    try {
-      if (isCurrentlyOpen) {
-        await repo.closeLid();
-      } else {
-        await repo.openLid();
-      }
-
-      if (context.mounted) {
-        final currentLid = repo.getCurrentStatus().lidState;
-        final targetLid = isCurrentlyOpen ? LidState.closed : LidState.open;
-        final isConfirmed = currentLid == targetLid;
-
-        final message = isConfirmed
-            ? 'Lid is ${currentLid.displayName.toLowerCase()}.'
-            : 'Command sent. Awaiting confirmation from EcoBin.';
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: isConfirmed
-                ? AppColors.slateSurfaceVariant
-                : AppColors.warningContainer,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Couldn't connect to EcoBin."),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: () => _handlePrimaryLidAction(context, status),
-            ),
-          ),
-        );
-      }
-    } finally {
-      ref.read(isCommandPendingProvider.notifier).setPending(false);
-    }
-  }
-
   void _openMonitoringScreen() {
     Navigator.of(context)
         .push(createPremiumPageRoute(const MonitoringScreen()));
@@ -178,11 +112,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isPending = ref.watch(isCommandPendingProvider);
     final alerts = ref.watch(alertsProvider).value ?? [];
     final hasActiveAlerts = alerts.isNotEmpty;
+    final isDemoActive = ref.watch(isFillDemoActiveProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('EcoBin Dashboard'),
         actions: [
+          if (!kReleaseMode)
+            IconButton(
+              tooltip: 'Fill Level Demo Preview',
+              icon: Icon(
+                Icons.science_outlined,
+                size: 20,
+                color: isDemoActive
+                    ? AppColors.warning
+                    : AppColors.textSecondary,
+              ),
+              onPressed: () => showFillDemoSheet(context),
+            ),
           IconButton(
             tooltip: 'View Alerts',
             icon: Stack(
@@ -265,6 +212,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (isDemoActive && !kReleaseMode) ...[
+                        Center(
+                          child: StatusChip(
+                            label:
+                                'Demo Fill: ${status.fillPercentage?.toInt() ?? 0}% (Tap to adjust)',
+                            icon: Icons.science_outlined,
+                            accentColor: AppColors.warning,
+                            onTap: () => showFillDemoSheet(context),
+                          ),
+                        ),
+                        AppSpacing.gapH16,
+                      ],
+
                       // Status Bar: Connection status & Active Mode
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -345,7 +305,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       ),
                       AppSpacing.gapH20,
 
-                      // Lid State Pill indicator
+                      // Lid State Pill indicator (Tapping navigates to Bin Controls)
                       Center(
                         child: StatusChip(
                           label: 'Lid: ${status.lidState.displayName}',
@@ -363,82 +323,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             horizontal: 14,
                             vertical: 6,
                           ),
+                          onTap: () => widget.onNavigateToTab(1),
                         ),
                       ),
                       AppSpacing.gapH24,
-
-                      // Primary Lid Actuation Button
-                      PressableScale(
-                        enabled: !isMoving && !isMaintenance,
-                        onTap: isMoving || isMaintenance
-                            ? null
-                            : () => _handlePrimaryLidAction(context, status),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: AnimatedSwitcher(
-                            duration: AppMotion.fast,
-                            transitionBuilder: (child, anim) =>
-                                FadeTransition(opacity: anim, child: child),
-                            child: isMoving
-                                ? FilledButton.icon(
-                                    key: const ValueKey('moving'),
-                                    onPressed: null,
-                                    icon: const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.onMintGreen,
-                                      ),
-                                    ),
-                                    label: const Text('Moving Lid...'),
-                                  )
-                                : isMaintenance
-                                ? OutlinedButton.icon(
-                                    key: const ValueKey('maintenance'),
-                                    onPressed: null,
-                                    icon: const Icon(
-                                      Icons.lock_rounded,
-                                      size: 18,
-                                      color: AppColors.warning,
-                                    ),
-                                    label: const Text(
-                                      'Lid Locked (Maintenance)',
-                                      style: TextStyle(
-                                        color: AppColors.warning,
-                                      ),
-                                    ),
-                                  )
-                                : isLidOpen
-                                ? OutlinedButton.icon(
-                                    key: const ValueKey('open'),
-                                    onPressed: () => _handlePrimaryLidAction(
-                                      context,
-                                      status,
-                                    ),
-                                    icon: const Icon(
-                                      Icons.arrow_downward_rounded,
-                                      size: 18,
-                                    ),
-                                    label: const Text('Close Lid'),
-                                  )
-                                : FilledButton.icon(
-                                    key: const ValueKey('closed'),
-                                    onPressed: () => _handlePrimaryLidAction(
-                                      context,
-                                      status,
-                                    ),
-                                    icon: const Icon(
-                                      Icons.arrow_upward_rounded,
-                                      size: 18,
-                                    ),
-                                    label: const Text('Open Lid'),
-                                  ),
-                          ),
-                        ),
-                      ),
-                      AppSpacing.gapH20,
 
                       // Dual Ultrasonic Sensors Telemetry Card
                       AppCard(

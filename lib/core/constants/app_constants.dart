@@ -14,4 +14,11 @@ abstract final class AppConstants {
 
   /// Default ESP32 factory SoftAP IPv4 address.
   static const String defaultEsp32Ip = '192.168.4.1';
+
+  /// Initial provisional estimate for distance (cm) from downward-facing fill sensor to bin bottom.
+  /// (Dustbin height is <= 23.0 cm; subject to calibration after physical testing).
+  static const double defaultEmptyDistanceCm = 23.0;
+
+  /// Provisional configurable threshold (cm) from fill sensor to intended full capacity level (~3 cm).
+  static const double defaultFullDistanceCm = 3.0;
 }

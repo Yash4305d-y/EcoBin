@@ -10,14 +10,14 @@ import '../theme/app_text_styles.dart';
 /// Animated radial fill gauge for the EcoBin companion app.
 ///
 /// Follows strict threshold coloring:
-/// - Mint Green & Teal accent (< 50%)
-/// - Warning Amber (50% - 80%)
+/// - Mint Green (< 50%)
+/// - Warning Yellow (50% - 80%)
 /// - Error Red (> 80%)
 ///
 /// Features:
-/// - Smooth spring animation with controlled overshoot on updates.
+/// - Smooth spring animation with controlled transition on updates.
 /// - Restrained glowing tip at the arc head.
-/// - Low-opacity radial glow responding to fill state.
+/// - Very subtle mint radial glow behind the gauge only.
 /// - Explicit "Unavailable" state when [fillPercentage] is null.
 /// - Full reduced-motion and accessibility support.
 class AnimatedFillGauge extends StatefulWidget {
@@ -64,7 +64,7 @@ class _AnimatedFillGaugeState extends State<AnimatedFillGauge> {
   Color _getBlendedColor(double percentage) {
     if (percentage < 50.0) {
       final t = (percentage / 50.0).clamp(0.0, 1.0);
-      return Color.lerp(const Color(0xFF00C9A7), AppColors.mintGreen, t)!;
+      return Color.lerp(const Color(0xFF48DF9F), AppColors.mintGreen, t)!;
     } else if (percentage <= 80.0) {
       final t = ((percentage - 50.0) / 30.0).clamp(0.0, 1.0);
       return Color.lerp(AppColors.mintGreen, AppColors.warning, t)!;
@@ -103,7 +103,7 @@ class _AnimatedFillGaugeState extends State<AnimatedFillGauge> {
                 child: CircularProgressIndicator(
                   value: 1.0,
                   strokeWidth: widget.strokeWidth,
-                  color: AppColors.slateOutlineVariant.withValues(alpha: 0.4),
+                  color: AppColors.slateOutlineVariant.withValues(alpha: 0.3),
                 ),
               ),
               Column(
@@ -159,32 +159,30 @@ class _AnimatedFillGaugeState extends State<AnimatedFillGauge> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Low-opacity radial ambient glow behind gauge responding to fill status
+                // Very subtle mint radial glow behind the gauge only
                 Container(
-                  width: widget.size * 0.85,
-                  height: widget.size * 0.85,
+                  width: widget.size * 0.82,
+                  height: widget.size * 0.82,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: currentColor.withValues(alpha: 0.08),
-                        blurRadius: 36,
-                        spreadRadius: 6,
+                        color: AppColors.mintGreen.withValues(alpha: 0.05),
+                        blurRadius: 30,
+                        spreadRadius: 2,
                       ),
                     ],
                   ),
                 ),
 
-                // Custom Painter for track, fill arc, and glowing tip
+                // Custom Painter for track, fill arc, and restrained glowing tip
                 CustomPaint(
                   size: Size(widget.size, widget.size),
                   painter: _GaugePainter(
                     progress: progress,
                     strokeWidth: widget.strokeWidth,
                     color: currentColor,
-                    trackColor: AppColors.slateSurfaceVariant.withValues(
-                      alpha: 0.7,
-                    ),
+                    trackColor: const Color(0xFF141818),
                   ),
                 ),
 
@@ -239,7 +237,7 @@ class _GaugePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
-    // Track Paint
+    // Track Paint (subtle low-contrast near-black ring)
     final trackPaint = Paint()
       ..color = trackColor
       ..style = PaintingStyle.stroke
@@ -267,7 +265,7 @@ class _GaugePainter extends CustomPainter {
       arcPaint,
     );
 
-    // Glowing tip at the leading edge
+    // Restrained glowing tip at the arc head
     if (progress > 0.02) {
       final tipAngle = startAngle + sweepAngle;
       final tipX = center.dx + radius * math.cos(tipAngle);
@@ -275,16 +273,16 @@ class _GaugePainter extends CustomPainter {
       final tipCenter = Offset(tipX, tipY);
 
       final glowPaint = Paint()
-        ..color = color.withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+        ..color = color.withValues(alpha: 0.3)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
 
-      canvas.drawCircle(tipCenter, strokeWidth * 0.7, glowPaint);
+      canvas.drawCircle(tipCenter, strokeWidth * 0.6, glowPaint);
 
       final highlightPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.8)
+        ..color = AppColors.textPrimary.withValues(alpha: 0.75)
         ..style = PaintingStyle.fill;
 
-      canvas.drawCircle(tipCenter, strokeWidth * 0.25, highlightPaint);
+      canvas.drawCircle(tipCenter, strokeWidth * 0.22, highlightPaint);
     }
   }
 

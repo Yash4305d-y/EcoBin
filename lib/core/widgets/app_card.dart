@@ -6,10 +6,9 @@ import '../theme/app_radii.dart';
 /// Minimalist elevated container for EcoBin.
 ///
 /// Features:
-/// - Subtle directional surface gradient
-/// - Restrained 1px border with soft opacity
-/// - Soft top highlight for consumer hardware depth
-/// - Clean background canvas integration without heavy shadows
+/// - Near-black surface (#101313) used sparingly for clear visual hierarchy
+/// - Restrained 1px border with subtle dark gray (#1E2424)
+/// - Soft top highlight without heavy shadows or glow
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -34,7 +33,7 @@ class AppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveRadius = borderRadius ?? AppRadii.borderRadiusLg;
     final effectiveBorderColor =
-        borderColor ?? AppColors.slateOutlineVariant.withValues(alpha: 0.6);
+        borderColor ?? AppColors.slateOutlineVariant.withValues(alpha: 0.8);
 
     return Container(
       margin: margin,
@@ -42,25 +41,18 @@ class AppCard extends StatelessWidget {
       decoration: BoxDecoration(
         color:
             backgroundColor ??
-            (gradient == null ? AppColors.slateSurface : null),
+            (gradient == null ? AppColors.surfaceNearBlack : null),
         gradient:
             gradient ??
             (backgroundColor == null ? AppColors.cardGradient : null),
         borderRadius: effectiveRadius,
         border: Border.all(color: effectiveBorderColor, width: 1),
-        boxShadow: [
-          // Soft top highlight
+        boxShadow: const [
           BoxShadow(
-            color: Colors.white.withValues(alpha: 0.02),
-            offset: const Offset(0, 1),
+            color: Color(0x0AFFFFFF),
+            offset: Offset(0, 1),
             blurRadius: 0,
             spreadRadius: 0,
-          ),
-          // Subtle resting depth
-          BoxShadow(
-            color: AppColors.darkNavyDeep.withValues(alpha: 0.35),
-            offset: const Offset(0, 4),
-            blurRadius: 16,
           ),
         ],
       ),

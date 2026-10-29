@@ -27,7 +27,7 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final duration = AppMotion.duration(context, AppMotion.fast);
-    final bg = backgroundColor ?? accentColor.withValues(alpha: 0.12);
+    final bg = backgroundColor ?? AppColors.surfaceNearBlack;
 
     final content = AnimatedContainer(
       duration: duration,

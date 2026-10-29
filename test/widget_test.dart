@@ -84,7 +84,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Bin Actuation & Controls'), findsOneWidget);
       expect(find.text('Open Lid'), findsOneWidget);
-      expect(find.text('Close Lid'), findsOneWidget);
 
       // Tap Activity tab
       await tester.tap(find.byIcon(Icons.history_outlined));
@@ -104,63 +103,54 @@ void main() {
       expect(find.text('EcoBin Dashboard'), findsOneWidget);
     });
 
-    testWidgets('Controls screen disables conflicting buttons when executing', (
-      WidgetTester tester,
-    ) async {
-      SharedPreferences.setMockInitialValues({
-        SettingsService.keyOnboardingComplete: true,
-      });
+    testWidgets(
+      'Controls screen disables Open Lid button when executing or lid is already open',
+      (WidgetTester tester) async {
+        SharedPreferences.setMockInitialValues({
+          SettingsService.keyOnboardingComplete: true,
+        });
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            deviceRepositoryProvider.overrideWith(
-              (ref) => ref.watch(mockDeviceRepositoryProvider),
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              deviceRepositoryProvider.overrideWith(
+                (ref) => ref.watch(mockDeviceRepositoryProvider),
+              ),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: const AppNavShell(),
             ),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.darkTheme,
-            home: const AppNavShell(),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Navigate to controls
-      await tester.tap(find.byIcon(Icons.tune_outlined));
-      await tester.pumpAndSettle();
+        // Navigate to controls
+        await tester.tap(find.byIcon(Icons.tune_outlined));
+        await tester.pumpAndSettle();
 
-      // Initial state is closed lid, so 'Close Lid' is disabled and 'Open Lid' is enabled
-      final openLidButton = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Open Lid'),
-      );
-      expect(openLidButton.onPressed, isNotNull);
+        // Initial state is closed lid, so 'Open Lid' is enabled
+        final openLidButton = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Open Lid'),
+        );
+        expect(openLidButton.onPressed, isNotNull);
 
-      final closeLidButton = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Close Lid'),
-      );
-      expect(closeLidButton.onPressed, isNull);
+        // Tap Open Lid
+        await tester.tap(find.widgetWithText(FilledButton, 'Open Lid'));
+        // Pump initial frame to start async delay
+        await tester.pump(const Duration(milliseconds: 100));
 
-      // Tap Open Lid
-      await tester.tap(find.widgetWithText(FilledButton, 'Open Lid'));
-      // Pump initial frame to start async delay
-      await tester.pump(const Duration(milliseconds: 100));
+        // Wait for actuation to complete (600ms in MockDeviceRepository)
+        await tester.pump(const Duration(milliseconds: 700));
+        await tester.pumpAndSettle();
 
-      // Wait for actuation to complete (600ms in MockDeviceRepository)
-      await tester.pump(const Duration(milliseconds: 700));
-      await tester.pumpAndSettle();
-
-      // Now lid should be open, so 'Open Lid' is disabled and 'Close Lid' is enabled
-      final openLidButtonAfter = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Open Lid'),
-      );
-      expect(openLidButtonAfter.onPressed, isNull);
-
-      final closeLidButtonAfter = tester.widget<OutlinedButton>(
-        find.widgetWithText(OutlinedButton, 'Close Lid'),
-      );
-      expect(closeLidButtonAfter.onPressed, isNotNull);
-    });
+        // Now lid should be open, so 'Open Lid' is disabled
+        final openLidButtonAfter = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Open Lid'),
+        );
+        expect(openLidButtonAfter.onPressed, isNull);
+      },
+    );
 
     testWidgets('Onboarding screen saves IP and connects when submitted', (
       WidgetTester tester,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,9 +8,11 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/pressable_scale.dart';
+import '../../data/providers/demo_mode_provider.dart';
 import '../../data/providers/device_provider.dart';
 import '../../data/providers/settings_provider.dart';
 import '../../data/services/settings_service.dart';
+import '../dashboard/widgets/fill_demo_sheet.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, required this.onOpenDebugLogs});
@@ -310,6 +313,100 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
+              if (!kReleaseMode) ...[
+                AppSpacing.gapH16,
+                // Developer Preview Demo Mode Card
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.science_outlined,
+                                size: 18,
+                                color: AppColors.warning,
+                              ),
+                              AppSpacing.gapW8,
+                              Text(
+                                'Fill Level Demo Preview',
+                                style: AppTextStyles.titleSmall,
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.15),
+                              borderRadius: AppRadii.borderRadiusXs,
+                            ),
+                            child: const Text(
+                              'DEBUG ONLY',
+                              style: TextStyle(
+                                color: AppColors.warning,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      AppSpacing.gapH8,
+                      Text(
+                        'Temporarily simulate dustbin fill levels to preview gauge animations and threshold colors. Connection status remains genuinely Offline.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      AppSpacing.gapH12,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => showFillDemoSheet(context),
+                              icon: const Icon(Icons.tune_rounded, size: 16),
+                              label: Text(
+                                ref.watch(isFillDemoActiveProvider)
+                                    ? 'Adjust Demo (${ref.watch(fillDemoOverrideProvider)?.toInt()}%)'
+                                    : 'Open Demo Controls',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: ref.watch(isFillDemoActiveProvider)
+                                      ? AppColors.warning
+                                      : AppColors.slateOutlineVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (ref.watch(isFillDemoActiveProvider)) ...[
+                            AppSpacing.gapW8,
+                            IconButton(
+                              tooltip: 'Turn Off Demo Mode',
+                              icon: const Icon(
+                                Icons.power_settings_new_rounded,
+                                size: 18,
+                                color: AppColors.error,
+                              ),
+                              onPressed: () => ref
+                                  .read(fillDemoOverrideProvider.notifier)
+                                  .disable(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

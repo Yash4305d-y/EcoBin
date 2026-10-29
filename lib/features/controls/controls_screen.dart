@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -40,6 +41,7 @@ class ControlsScreen extends ConsumerWidget {
     }
 
     ref.read(isCommandPendingProvider.notifier).setPending(true);
+    HapticFeedback.mediumImpact();
     try {
       await ref.read(deviceRepositoryProvider).openLid();
       if (context.mounted) {
@@ -73,61 +75,6 @@ class ControlsScreen extends ConsumerWidget {
               label: 'Retry',
               textColor: Colors.white,
               onPressed: () => _handleOpenLid(context, ref, status),
-            ),
-          ),
-        );
-      }
-    } finally {
-      ref.read(isCommandPendingProvider.notifier).setPending(false);
-    }
-  }
-
-  Future<void> _handleCloseLid(
-    BuildContext context,
-    WidgetRef ref,
-    DeviceStatus status,
-  ) async {
-    final pending = ref.read(isCommandPendingProvider);
-    if (pending ||
-        status.lidState == LidState.closed ||
-        status.lidState == LidState.moving) {
-      return;
-    }
-
-    ref.read(isCommandPendingProvider.notifier).setPending(true);
-    try {
-      await ref.read(deviceRepositoryProvider).closeLid();
-      if (context.mounted) {
-        final currentLid = ref
-            .read(deviceRepositoryProvider)
-            .getCurrentStatus()
-            .lidState;
-        final isConfirmed = currentLid == LidState.closed;
-        final message = isConfirmed
-            ? 'Lid is closed.'
-            : 'Command sent. Awaiting confirmation from EcoBin.';
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: isConfirmed
-                ? AppColors.slateSurfaceVariant
-                : AppColors.warningContainer,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Couldn't connect to EcoBin."),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: () => _handleCloseLid(context, ref, status),
             ),
           ),
         );
@@ -293,7 +240,6 @@ class ControlsScreen extends ConsumerWidget {
           data: (status) {
             final isLidMoving = status.lidState == LidState.moving || isPending;
             final isLidOpen = status.lidState == LidState.open;
-            final isLidClosed = status.lidState == LidState.closed;
             final isMaintenance = status.mode == OperatingMode.maintenance;
 
             return SingleChildScrollView(
@@ -346,63 +292,32 @@ class ControlsScreen extends ConsumerWidget {
                   ),
                   AppSpacing.gapH12,
 
-                  // Open / Close Buttons Row
-                  Row(
-                    children: [
-                      // Open Lid Button
-                      Expanded(
-                        child: PressableScale(
-                          enabled: !isLidMoving && !isLidOpen && !isMaintenance,
-                          onTap: (isLidMoving || isLidOpen || isMaintenance)
-                              ? null
-                              : () => _handleOpenLid(context, ref, status),
-                          child: FilledButton.icon(
-                            onPressed:
-                                (isLidMoving || isLidOpen || isMaintenance)
-                                ? null
-                                : () => _handleOpenLid(context, ref, status),
-                            icon: isLidMoving && !isLidClosed
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.onMintGreen,
-                                    ),
-                                  )
-                                : const Icon(Icons.arrow_upward_rounded),
-                            label: const Text('Open Lid'),
-                          ),
-                        ),
+                  // Open Lid Button (Lid closes automatically)
+                  PressableScale(
+                    enabled: !isLidMoving && !isLidOpen && !isMaintenance,
+                    onTap: (isLidMoving || isLidOpen || isMaintenance)
+                        ? null
+                        : () => _handleOpenLid(context, ref, status),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: FilledButton.icon(
+                        onPressed: (isLidMoving || isLidOpen || isMaintenance)
+                            ? null
+                            : () => _handleOpenLid(context, ref, status),
+                        icon: isLidMoving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.onMintGreen,
+                                ),
+                              )
+                            : const Icon(Icons.arrow_upward_rounded),
+                        label: const Text('Open Lid'),
                       ),
-                      AppSpacing.gapW12,
-
-                      // Close Lid Button
-                      Expanded(
-                        child: PressableScale(
-                          enabled: !isLidMoving && !isLidClosed,
-                          onTap: (isLidMoving || isLidClosed)
-                              ? null
-                              : () => _handleCloseLid(context, ref, status),
-                          child: OutlinedButton.icon(
-                            onPressed: (isLidMoving || isLidClosed)
-                                ? null
-                                : () => _handleCloseLid(context, ref, status),
-                            icon: isLidMoving && !isLidOpen
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  )
-                                : const Icon(Icons.arrow_downward_rounded),
-                            label: const Text('Close Lid'),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   AppSpacing.gapH24,
 

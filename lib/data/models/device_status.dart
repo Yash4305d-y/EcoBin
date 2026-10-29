@@ -1,3 +1,4 @@
+import '../../core/utils/dustbin_fill_calculator.dart';
 import 'device_connection_state.dart';
 
 /// Operating state of the bin's lid.
@@ -122,16 +123,6 @@ class DeviceStatus {
       throw const FormatException('Missing required fields: lid_state or mode');
     }
 
-    final double? parsedFill;
-    final dynamic rawFill = json['fill_percentage'];
-    if (rawFill == null) {
-      parsedFill = null;
-    } else if (rawFill is num) {
-      parsedFill = rawFill.toDouble().clamp(0.0, 100.0);
-    } else {
-      parsedFill = null;
-    }
-
     // Opening count: check openings_since_boot first, fallback to today_openings
     final dynamic rawOpenings =
         json['openings_since_boot'] ?? json['today_openings'];
@@ -174,6 +165,20 @@ class DeviceStatus {
       parsedFillDistance = rawFillDist.toDouble();
     } else {
       parsedFillDistance = null;
+    }
+
+    // Fill percentage: Use ESP-provided percentage if present, otherwise calculate from calibrated fill sensor depth
+    final double? parsedFill;
+    final dynamic rawFill = json['fill_percentage'];
+    if (rawFill is num) {
+      parsedFill = rawFill.toDouble().clamp(0.0, 100.0);
+    } else if (parsedFillDistance != null && parsedFillSensorOk != false) {
+      parsedFill = const DustbinFillCalculator().calculate(
+        parsedFillDistance,
+        fillSensorOk: parsedFillSensorOk,
+      );
+    } else {
+      parsedFill = null;
     }
 
     final dynamic rawBattery = json['battery_percentage'];

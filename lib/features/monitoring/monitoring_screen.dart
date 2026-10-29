@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
@@ -218,7 +219,8 @@ class MonitoringScreen extends ConsumerWidget {
                         ),
                         _DiagnosticLine(
                           label: 'Total Calibration Depth',
-                          value: '65.0 cm',
+                          value:
+                              '${AppConstants.defaultEmptyDistanceCm.toStringAsFixed(1)} cm',
                         ),
                       ],
                     ),
