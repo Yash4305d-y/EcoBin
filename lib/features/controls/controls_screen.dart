@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_card.dart';
+import '../../core/widgets/pressable_scale.dart';
+import '../../core/widgets/status_chip.dart';
 import '../../data/models/device_status.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -146,7 +150,7 @@ class ControlsScreen extends ConsumerWidget {
         context: context,
         backgroundColor: AppColors.slateSurface,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           side: BorderSide(color: AppColors.warning, width: 1),
         ),
         enableDrag: true,
@@ -154,14 +158,18 @@ class ControlsScreen extends ConsumerWidget {
         constraints: const BoxConstraints(maxWidth: 600),
         builder: (sheetCtx) => SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
                   children: const [
-                    Icon(Icons.build_rounded, color: AppColors.warning),
+                    Icon(
+                      Icons.build_rounded,
+                      color: AppColors.warning,
+                      size: 20,
+                    ),
                     AppSpacing.gapW8,
                     Expanded(
                       child: Text(
@@ -171,16 +179,16 @@ class ControlsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                AppSpacing.gapH12,
+                AppSpacing.gapH8,
                 const Text(
-                  'Maintenance Mode locks the bin lid closed and halts automatic proximity actuation routines. This prevents accidental opening while replacing waste bags or cleaning.',
-                  style: AppTextStyles.bodyMedium,
+                  'Locks lid closed and halts proximity sensors for safe cleaning or bag replacement.',
+                  style: AppTextStyles.bodySmall,
                 ),
-                AppSpacing.gapH24,
+                AppSpacing.gapH20,
                 Row(
                   children: [
                     Expanded(
-                      child: TextButton(
+                      child: OutlinedButton(
                         onPressed: () => Navigator.of(sheetCtx).pop(false),
                         child: const Text('Cancel'),
                       ),
@@ -190,7 +198,6 @@ class ControlsScreen extends ConsumerWidget {
                       child: FilledButton(
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.warning,
-                          minimumSize: const Size(0, 44),
                         ),
                         onPressed: () => Navigator.of(sheetCtx).pop(true),
                         child: const Text(
@@ -215,7 +222,7 @@ class ControlsScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Mode updated: ${mode.displayName}.'),
+            content: Text('Mode: ${mode.displayName}.'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -255,11 +262,11 @@ class ControlsScreen extends ConsumerWidget {
                 children: [
                   const Icon(
                     Icons.cloud_off_rounded,
-                    size: 48,
+                    size: 44,
                     color: AppColors.textSecondary,
                   ),
                   AppSpacing.gapH16,
-                  Text(
+                  const Text(
                     "Couldn't connect to EcoBin",
                     style: AppTextStyles.titleMedium,
                     textAlign: TextAlign.center,
@@ -294,257 +301,122 @@ class ControlsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Current State Summary Card with smooth transition
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOutCubic,
-                    padding: AppSpacing.paddingCard,
-                    decoration: BoxDecoration(
-                      color: AppColors.slateSurface,
-                      borderRadius: AppRadii.borderRadiusLg,
-                      border: Border.all(color: AppColors.slateOutlineVariant),
-                    ),
-                    child: Row(
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          decoration: BoxDecoration(
-                            color: isLidMoving
-                                ? AppColors.warningContainer
-                                : isLidOpen
-                                ? AppColors.mintGreenContainer
-                                : AppColors.slateSurfaceVariant,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isLidMoving
-                                ? Icons.sync_rounded
-                                : isLidOpen
-                                ? Icons.lock_open_rounded
-                                : Icons.lock_outline_rounded,
-                            color: isLidMoving
-                                ? AppColors.onWarningContainer
-                                : isLidOpen
-                                ? AppColors.mintGreen
-                                : AppColors.textSecondary,
-                            size: 28,
-                          ),
-                        ),
-                        AppSpacing.gapW16,
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Lid State: ${status.lidState.displayName}',
-                                style: AppTextStyles.titleMedium,
-                              ),
-                              AppSpacing.gapH2,
-                              Text(
-                                'Active Mode: ${status.mode.displayName}',
-                                style: AppTextStyles.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (isLidMoving)
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.mintGreen,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  AppSpacing.gapH12,
-
-                  // Compact Sensor Overview
-                  Container(
+                  // Active Status Bar
+                  AppCard(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
                       vertical: AppSpacing.sm,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.slateSurfaceCard,
-                      borderRadius: AppRadii.borderRadiusMd,
-                      border: Border.all(color: AppColors.slateOutlineVariant),
-                    ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.sensors_rounded,
-                          size: 16,
-                          color: AppColors.mintGreen,
-                        ),
-                        AppSpacing.gapW8,
-                        Text(
-                          'Sensors:',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        AppSpacing.gapW8,
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                (status.handSensorOk == true
-                                        ? AppColors.mintGreen
-                                        : status.handSensorOk == false
-                                        ? AppColors.error
-                                        : AppColors.textTertiary)
-                                    .withValues(alpha: 0.15),
-                            borderRadius: AppRadii.borderRadiusXs,
-                          ),
-                          child: Text(
-                            'Hand: ${status.handSensorOk == true
-                                ? "OK"
-                                : status.handSensorOk == false
-                                ? "FAIL"
-                                : "N/A"}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: status.handSensorOk == true
-                                  ? AppColors.mintGreen
-                                  : status.handSensorOk == false
-                                  ? AppColors.error
-                                  : AppColors.textTertiary,
-                            ),
-                          ),
-                        ),
-                        AppSpacing.gapW8,
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                (status.fillSensorOk == true
-                                        ? AppColors.mintGreen
-                                        : status.fillSensorOk == false
-                                        ? AppColors.error
-                                        : AppColors.textTertiary)
-                                    .withValues(alpha: 0.15),
-                            borderRadius: AppRadii.borderRadiusXs,
-                          ),
-                          child: Text(
-                            'Fill: ${status.fillSensorOk == true
-                                ? "OK"
-                                : status.fillSensorOk == false
-                                ? "FAIL"
-                                : "N/A"}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: status.fillSensorOk == true
-                                  ? AppColors.mintGreen
-                                  : status.fillSensorOk == false
-                                  ? AppColors.error
-                                  : AppColors.textTertiary,
-                            ),
-                          ),
+                        StatusChip(
+                          label: status.lidState.displayName,
+                          icon: isLidMoving
+                              ? Icons.sync_rounded
+                              : isLidOpen
+                              ? Icons.lock_open_rounded
+                              : Icons.lock_outline_rounded,
+                          accentColor: isLidMoving
+                              ? AppColors.info
+                              : isLidOpen
+                              ? AppColors.warning
+                              : AppColors.mintGreen,
                         ),
                         const Spacer(),
-                        Text(
-                          status.fillPercentage != null
-                              ? '${status.fillPercentage!.toStringAsFixed(0)}% depth'
-                              : 'Unavailable',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: status.fillPercentage != null
-                                ? AppColors.textPrimary
-                                : AppColors.textTertiary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
+                        StatusChip(
+                          label: status.mode.displayName,
+                          icon: status.mode == OperatingMode.automatic
+                              ? Icons.auto_mode_rounded
+                              : status.mode == OperatingMode.manual
+                              ? Icons.touch_app_rounded
+                              : Icons.build_rounded,
+                          accentColor: isMaintenance
+                              ? AppColors.warning
+                              : AppColors.textSecondary,
                         ),
                       ],
                     ),
                   ),
-                  AppSpacing.gapH20,
+                  AppSpacing.gapH24,
 
-                  // Lid Commands Section
+                  // Manual Actuation Section Header
                   const Text(
-                    'Manual Servo Actuation',
+                    'Manual Actuation',
                     style: AppTextStyles.titleMedium,
-                  ),
-                  AppSpacing.gapH4,
-                  const Text(
-                    'Conflicting actions are locked while actuation commands are running.',
-                    style: AppTextStyles.bodySmall,
                   ),
                   AppSpacing.gapH12,
 
+                  // Open / Close Buttons Row
                   Row(
                     children: [
                       // Open Lid Button
                       Expanded(
-                        child: FilledButton.icon(
-                          onPressed: (isLidMoving || isLidOpen || isMaintenance)
+                        child: PressableScale(
+                          enabled: !isLidMoving && !isLidOpen && !isMaintenance,
+                          onTap: (isLidMoving || isLidOpen || isMaintenance)
                               ? null
                               : () => _handleOpenLid(context, ref, status),
-                          icon: isLidMoving && !isLidClosed
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.onMintGreen,
-                                  ),
-                                )
-                              : const Icon(Icons.arrow_upward_rounded),
-                          label: const Text('Open Lid'),
+                          child: FilledButton.icon(
+                            onPressed:
+                                (isLidMoving || isLidOpen || isMaintenance)
+                                ? null
+                                : () => _handleOpenLid(context, ref, status),
+                            icon: isLidMoving && !isLidClosed
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.onMintGreen,
+                                    ),
+                                  )
+                                : const Icon(Icons.arrow_upward_rounded),
+                            label: const Text('Open Lid'),
+                          ),
                         ),
                       ),
                       AppSpacing.gapW12,
 
                       // Close Lid Button
                       Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: (isLidMoving || isLidClosed)
+                        child: PressableScale(
+                          enabled: !isLidMoving && !isLidClosed,
+                          onTap: (isLidMoving || isLidClosed)
                               ? null
                               : () => _handleCloseLid(context, ref, status),
-                          icon: isLidMoving && !isLidOpen
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                )
-                              : const Icon(Icons.arrow_downward_rounded),
-                          label: const Text('Close Lid'),
+                          child: OutlinedButton.icon(
+                            onPressed: (isLidMoving || isLidClosed)
+                                ? null
+                                : () => _handleCloseLid(context, ref, status),
+                            icon: isLidMoving && !isLidOpen
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  )
+                                : const Icon(Icons.arrow_downward_rounded),
+                            label: const Text('Close Lid'),
+                          ),
                         ),
                       ),
                     ],
                   ),
                   AppSpacing.gapH24,
 
-                  // Operating Mode Selection
+                  // Operating Mode Selection Header
                   const Text(
-                    'Operating Mode Selection',
+                    'Operating Mode',
                     style: AppTextStyles.titleMedium,
-                  ),
-                  AppSpacing.gapH4,
-                  const Text(
-                    'Determines ultrasonic triggering and lid locking policies.',
-                    style: AppTextStyles.bodySmall,
                   ),
                   AppSpacing.gapH12,
 
                   _ModeOptionTile(
                     title: 'Automatic Mode',
-                    description: 'Ultrasonic proximity sensor triggers contactless opening when movement is detected within 20cm.',
+                    subtitle:
+                        'Ultrasonic proximity triggers hands-free opening',
                     icon: Icons.auto_mode_rounded,
                     selected: status.mode == OperatingMode.automatic,
                     disabled: isPending,
@@ -555,7 +427,7 @@ class ControlsScreen extends ConsumerWidget {
 
                   _ModeOptionTile(
                     title: 'Manual Mode',
-                    description: 'Disables ultrasonic proximity trigger. Bin only opens via companion app or physical override.',
+                    subtitle: 'App or button controls only (sensor disabled)',
                     icon: Icons.touch_app_rounded,
                     selected: status.mode == OperatingMode.manual,
                     disabled: isPending,
@@ -566,7 +438,7 @@ class ControlsScreen extends ConsumerWidget {
 
                   _ModeOptionTile(
                     title: 'Maintenance Mode',
-                    description: 'Locks lid closed and halts all actuation routines for safe bag replacement or cleaning.',
+                    subtitle: 'Lid locked closed for bag changing or cleaning',
                     icon: Icons.build_rounded,
                     selected: status.mode == OperatingMode.maintenance,
                     disabled: isPending,
@@ -586,7 +458,7 @@ class ControlsScreen extends ConsumerWidget {
 class _ModeOptionTile extends StatelessWidget {
   const _ModeOptionTile({
     required this.title,
-    required this.description,
+    required this.subtitle,
     required this.icon,
     required this.selected,
     required this.disabled,
@@ -594,7 +466,7 @@ class _ModeOptionTile extends StatelessWidget {
   });
 
   final String title;
-  final String description;
+  final String subtitle;
   final IconData icon;
   final bool selected;
   final bool disabled;
@@ -602,11 +474,16 @@ class _ModeOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return PressableScale(
+      enabled: !disabled,
       onTap: disabled ? null : onTap,
-      borderRadius: AppRadii.borderRadiusMd,
-      child: Container(
-        padding: AppSpacing.paddingCard,
+      child: AnimatedContainer(
+        duration: AppMotion.duration(context, AppMotion.fast),
+        curve: AppMotion.smoothCurve,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
         decoration: BoxDecoration(
           color: selected
               ? AppColors.slateSurfaceVariant
@@ -615,48 +492,47 @@ class _ModeOptionTile extends StatelessWidget {
           border: Border.all(
             color: selected
                 ? AppColors.mintGreen
-                : AppColors.slateOutlineVariant,
+                : AppColors.slateOutlineVariant.withValues(alpha: 0.6),
             width: selected ? 1.5 : 1,
           ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
               icon,
               color: selected ? AppColors.mintGreen : AppColors.textSecondary,
-              size: 22,
+              size: 20,
             ),
             AppSpacing.gapW12,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        title,
-                        style: AppTextStyles.titleSmall.copyWith(
-                          color: selected
-                              ? AppColors.mintGreen
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                      if (selected) ...[
-                        AppSpacing.gapW8,
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          size: 16,
-                          color: AppColors.mintGreen,
-                        ),
-                      ],
-                    ],
+                  Text(
+                    title,
+                    style: AppTextStyles.titleSmall.copyWith(
+                      color: selected
+                          ? AppColors.mintGreen
+                          : AppColors.textPrimary,
+                    ),
                   ),
-                  AppSpacing.gapH4,
-                  Text(description, style: AppTextStyles.bodySmall),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
+            if (selected)
+              const Icon(
+                Icons.check_circle_rounded,
+                size: 16,
+                color: AppColors.mintGreen,
+              ),
           ],
         ),
       ),

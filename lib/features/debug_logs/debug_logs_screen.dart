@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_card.dart';
 import '../../data/models/debug_log_entry.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -41,7 +42,7 @@ class DebugLogsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Clear Logs',
-            icon: const Icon(Icons.delete_sweep_rounded),
+            icon: const Icon(Icons.delete_sweep_rounded, size: 20),
             onPressed: () async {
               final confirmed = await showDialog<bool>(
                 context: context,
@@ -58,6 +59,7 @@ class DebugLogsScreen extends ConsumerWidget {
                       Icon(
                         Icons.delete_sweep_rounded,
                         color: AppColors.warning,
+                        size: 20,
                       ),
                       AppSpacing.gapW8,
                       Text(
@@ -67,7 +69,7 @@ class DebugLogsScreen extends ConsumerWidget {
                     ],
                   ),
                   content: const Text(
-                    'This will clear all diagnostic trace entries recorded during this session.',
+                    'Clear all diagnostic trace entries recorded during this session?',
                     style: AppTextStyles.bodyMedium,
                   ),
                   actions: [
@@ -80,7 +82,7 @@ class DebugLogsScreen extends ConsumerWidget {
                         backgroundColor: AppColors.error,
                       ),
                       onPressed: () => Navigator.of(dialogCtx).pop(true),
-                      child: const Text('Clear Trace'),
+                      child: const Text('Clear'),
                     ),
                   ],
                 ),
@@ -94,7 +96,7 @@ class DebugLogsScreen extends ConsumerWidget {
           ),
           IconButton(
             tooltip: 'Refresh Logs',
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, size: 20),
             onPressed: () => ref.invalidate(debugLogsProvider),
           ),
         ],
@@ -105,39 +107,6 @@ class DebugLogsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                padding: AppSpacing.paddingCard,
-                decoration: BoxDecoration(
-                  color: AppColors.slateSurfaceCard,
-                  borderRadius: AppRadii.borderRadiusMd,
-                  border: Border.all(color: AppColors.slateOutlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.lan_rounded,
-                      color: AppColors.mintGreen,
-                      size: 20,
-                    ),
-                    AppSpacing.gapW12,
-                    Expanded(
-                      child: Text(
-                        'Diagnostics: Records raw HTTP endpoint transactions, latency, response codes, and network connection state changes.',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              AppSpacing.gapH8,
-
-              const Text(
-                'Recent Execution Trace',
-                style: AppTextStyles.titleMedium,
-              ),
-              AppSpacing.gapH12,
-
               logsAsync.when(
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.mintGreen),
@@ -145,23 +114,16 @@ class DebugLogsScreen extends ConsumerWidget {
                 error: (err, _) => Center(child: Text('Error: $err')),
                 data: (logs) {
                   if (logs.isEmpty) {
-                    return Container(
+                    return AppCard(
                       padding: const EdgeInsets.symmetric(
                         vertical: AppSpacing.xxxl,
                         horizontal: AppSpacing.lg,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.slateSurface,
-                        borderRadius: AppRadii.borderRadiusLg,
-                        border: Border.all(
-                          color: AppColors.slateOutlineVariant,
-                        ),
                       ),
                       child: Column(
                         children: const [
                           Icon(
                             Icons.terminal_rounded,
-                            size: 40,
+                            size: 36,
                             color: AppColors.textTertiary,
                           ),
                           AppSpacing.gapH12,
@@ -171,7 +133,7 @@ class DebugLogsScreen extends ConsumerWidget {
                           ),
                           AppSpacing.gapH4,
                           Text(
-                            'Execute a lid command in Controls to generate new log entries.',
+                            'Execute a lid command to view transaction logs.',
                             style: AppTextStyles.bodySmall,
                           ),
                         ],
@@ -179,106 +141,86 @@ class DebugLogsScreen extends ConsumerWidget {
                     );
                   }
 
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: logs.length,
-                    separatorBuilder: (context, index) => AppSpacing.gapH8,
-                    itemBuilder: (context, index) {
-                      final log = logs[index];
-                      final color = _getSeverityColor(log.severity);
-
-                      return Container(
-                        padding: AppSpacing.paddingCard,
-                        decoration: BoxDecoration(
-                          color: AppColors.slateSurfaceCard,
-                          borderRadius: AppRadii.borderRadiusMd,
-                          border: Border.all(
-                            color: AppColors.slateOutlineVariant,
-                          ),
+                  return AppCard(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: logs.length,
+                      separatorBuilder: (context, index) => Divider(
+                        color: AppColors.slateOutlineVariant.withValues(
+                          alpha: 0.35,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.xs,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.15),
-                                    borderRadius: AppRadii.borderRadiusXs,
-                                  ),
-                                  child: Text(
-                                    log.severity.name.toUpperCase(),
-                                    style: AppTextStyles.labelSmall.copyWith(
-                                      color: color,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 9,
+                        height: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final log = logs[index];
+                        final color = _getSeverityColor(log.severity);
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.sm,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.15),
+                                      borderRadius: AppRadii.borderRadiusXs,
+                                    ),
+                                    child: Text(
+                                      log.severity.name.toUpperCase(),
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: color,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 8,
+                                        letterSpacing: 0.3,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.xs,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.15),
-                                    borderRadius: AppRadii.borderRadiusXs,
-                                  ),
-                                  child: Text(
-                                    log.severity.label,
-                                    style: AppTextStyles.labelSmall.copyWith(
-                                      color: color,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ),
-                                AppSpacing.gapW8,
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.xs,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.slateSurfaceVariant,
-                                    borderRadius: AppRadii.borderRadiusXs,
-                                  ),
-                                  child: Text(
+                                  AppSpacing.gapW8,
+                                  Text(
                                     log.source,
                                     style: AppTextStyles.labelSmall.copyWith(
                                       color: AppColors.mintGreen,
                                       fontSize: 10,
                                     ),
                                   ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  _formatLogTime(log.timestamp),
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.textTertiary,
-                                    fontFamily: 'monospace',
-                                    fontSize: 11,
+                                  const Spacer(),
+                                  Text(
+                                    _formatLogTime(log.timestamp),
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: AppColors.textTertiary,
+                                      fontFamily: 'monospace',
+                                      fontSize: 10,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            AppSpacing.gapH8,
-                            Text(
-                              log.message,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.textPrimary,
-                                fontFamily: 'monospace',
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                              AppSpacing.gapH4,
+                              Text(
+                                log.message,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontFamily: 'monospace',
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
               ),

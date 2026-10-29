@@ -6,6 +6,7 @@ import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/animated_fill_gauge.dart';
+import '../../core/widgets/app_card.dart';
 import '../../data/models/device_status.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -20,7 +21,7 @@ class MonitoringScreen extends ConsumerWidget {
       return '${status.handDistanceCm!.toStringAsFixed(1)} cm';
     }
     if (status.handSensorOk == true) {
-      return 'No Object';
+      return 'Clear';
     }
     return 'Unknown';
   }
@@ -31,15 +32,15 @@ class MonitoringScreen extends ConsumerWidget {
     }
     if (status.handDistanceCm != null) {
       if (status.handDistanceCm! <= 20.0) {
-        return 'Object detected in trigger zone (≤ 20cm)';
+        return 'Object detected in range';
       } else {
-        return 'Object far away (> 20cm trigger zone)';
+        return 'Object out of trigger zone';
       }
     }
     if (status.handSensorOk == true) {
-      return 'Clear: No object in range (Far away)';
+      return 'Clear: No object detected';
     }
-    return 'Health status not reported';
+    return 'Status unreported';
   }
 
   String _getFillSensorDetail(DeviceStatus status) {
@@ -47,15 +48,15 @@ class MonitoringScreen extends ConsumerWidget {
       return 'Fill sensor unavailable';
     }
     if (status.fillDistanceCm != null) {
-      return 'Depth: ${status.fillDistanceCm!.toStringAsFixed(1)} cm to waste';
+      return 'Distance: ${status.fillDistanceCm!.toStringAsFixed(1)} cm';
     }
     if (status.fillPercentage != null) {
-      return 'Calculated capacity from fill sensor';
+      return 'Capacity calculated';
     }
     if (status.fillSensorOk == true) {
       return 'Sensor online: Reading unavailable';
     }
-    return 'Health status not reported';
+    return 'Status unreported';
   }
 
   @override
@@ -77,11 +78,11 @@ class MonitoringScreen extends ConsumerWidget {
                 children: [
                   const Icon(
                     Icons.cloud_off_rounded,
-                    size: 48,
+                    size: 44,
                     color: AppColors.textSecondary,
                   ),
                   AppSpacing.gapH16,
-                  Text(
+                  const Text(
                     "Couldn't connect to EcoBin",
                     style: AppTextStyles.titleMedium,
                     textAlign: TextAlign.center,
@@ -107,21 +108,31 @@ class MonitoringScreen extends ConsumerWidget {
           ),
           data: (status) {
             final fill = status.fillPercentage;
-            final isOffline = fill == null;
 
             return SingleChildScrollView(
               padding: AppSpacing.paddingScreen,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Dual Ultrasonic Sensors Health & Telemetry Card
-                  Container(
-                    padding: AppSpacing.paddingCard,
-                    decoration: BoxDecoration(
-                      color: AppColors.slateSurface,
-                      borderRadius: AppRadii.borderRadiusLg,
-                      border: Border.all(color: AppColors.slateOutlineVariant),
+                  // Hero Radial Gauge
+                  Center(
+                    child: Hero(
+                      tag: 'ecobin_hero_fill_gauge',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: AnimatedFillGauge(
+                          fillPercentage: fill,
+                          size: 210,
+                          strokeWidth: 15,
+                        ),
+                      ),
                     ),
+                  ),
+                  AppSpacing.gapH24,
+
+                  // Dual Ultrasonic Sensors Card
+                  AppCard(
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -129,27 +140,34 @@ class MonitoringScreen extends ConsumerWidget {
                           'Dual Ultrasonic Sensors',
                           style: AppTextStyles.titleMedium,
                         ),
-                        AppSpacing.gapH16,
+                        AppSpacing.gapH12,
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Hand Sensor Indicator
                             Expanded(
-                              child: _SensorTelemetryBox(
+                              child: _SensorTelemetryItem(
                                 title: 'Hand Sensor',
-                                subtitle: 'Proximity Trigger',
                                 icon: Icons.front_hand_rounded,
                                 isOk: status.handSensorOk,
                                 primaryMetric: _getHandDistanceDisplay(status),
                                 statusDetail: _getHandSensorDetail(status),
                               ),
                             ),
-                            AppSpacing.gapW12,
+                            Container(
+                              width: 1,
+                              height: 80,
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                              ),
+                              color: AppColors.slateOutlineVariant.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
                             // Fill Sensor Indicator
                             Expanded(
-                              child: _SensorTelemetryBox(
+                              child: _SensorTelemetryItem(
                                 title: 'Fill Sensor',
-                                subtitle: 'Waste Depth Level',
                                 icon: Icons.straighten_rounded,
                                 isOk: status.fillSensorOk,
                                 primaryMetric: fill != null
@@ -163,225 +181,44 @@ class MonitoringScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  AppSpacing.gapH20,
+                  AppSpacing.gapH16,
 
-                  // Hero Gauge Card (Internal Fill Sensor Only)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.xxl,
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Ultrasonic Fill Sensor',
-                                style: AppTextStyles.titleMedium,
-                              ),
-                              Text(
-                                'Fill Sensor Only',
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.mintGreen,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          AppSpacing.gapH24,
-
-                          // Large Animated Gauge (Fill Sensor Only) with Hero Shared Element
-                          Hero(
-                            tag: 'ecobin_hero_fill_gauge',
-                            child: Material(
-                              color: Colors.transparent,
-                              child: AnimatedFillGauge(
-                                fillPercentage: fill,
-                                size: 220,
-                                strokeWidth: 16,
-                              ),
-                            ),
-                          ),
-                          AppSpacing.gapH24,
-
-                          // Capacity Explanation
-                          Container(
-                            padding: AppSpacing.paddingCard,
-                            decoration: BoxDecoration(
-                              color: isOffline
-                                  ? AppColors.errorContainer.withValues(
-                                      alpha: 0.2,
-                                    )
-                                  : (fill < 50.0)
-                                  ? AppColors.mintGreenContainer.withValues(
-                                      alpha: 0.3,
-                                    )
-                                  : (fill <= 80.0)
-                                  ? AppColors.warningContainer.withValues(
-                                      alpha: 0.3,
-                                    )
-                                  : AppColors.errorContainer.withValues(
-                                      alpha: 0.3,
-                                    ),
-                              borderRadius: AppRadii.borderRadiusMd,
-                              border: Border.all(
-                                color: isOffline
-                                    ? AppColors.error.withValues(alpha: 0.5)
-                                    : (fill < 50.0)
-                                    ? AppColors.mintGreen.withValues(alpha: 0.5)
-                                    : (fill <= 80.0)
-                                    ? AppColors.warning.withValues(alpha: 0.5)
-                                    : AppColors.error.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isOffline
-                                      ? Icons.warning_amber_rounded
-                                      : (fill < 50.0)
-                                      ? Icons.check_circle_outline_rounded
-                                      : (fill <= 80.0)
-                                      ? Icons.info_outline_rounded
-                                      : Icons.error_outline_rounded,
-                                  color: isOffline
-                                      ? AppColors.error
-                                      : (fill < 50.0)
-                                      ? AppColors.mintGreen
-                                      : (fill <= 80.0)
-                                      ? AppColors.warning
-                                      : AppColors.error,
-                                ),
-                                AppSpacing.gapW12,
-                                Expanded(
-                                  child: Text(
-                                    isOffline
-                                        ? 'Fill sensor reading unavailable. Probe returned null echo or is offline.'
-                                        : (fill < 50.0)
-                                        ? 'Normal Fill Level: Bin has ample available capacity.'
-                                        : (fill <= 80.0)
-                                        ? 'Moderate Fill Level: Approaching scheduled collection threshold.'
-                                        : 'Critical Capacity Alert: Bin exceeds 80% and should be emptied immediately.',
-                                    style: AppTextStyles.bodyMedium.copyWith(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  AppSpacing.gapH20,
-
-                  // Threshold Reference Legend
-                  Container(
-                    padding: AppSpacing.paddingCard,
-                    decoration: BoxDecoration(
-                      color: AppColors.slateSurface,
-                      borderRadius: AppRadii.borderRadiusLg,
-                      border: Border.all(color: AppColors.slateOutlineVariant),
-                    ),
+                  // Sensor Telemetry Specifications
+                  AppCard(
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Telemetry Color Coding Scale',
+                          'Telemetry Diagnostics',
                           style: AppTextStyles.titleSmall,
                         ),
                         AppSpacing.gapH12,
-                        const _ThresholdLegendRow(
-                          color: AppColors.mintGreen,
-                          label: 'Normal Capacity',
-                          range: '0% – 49%',
-                          description: 'Safe operating level',
-                        ),
-                        const Divider(height: AppSpacing.lg),
-                        const _ThresholdLegendRow(
-                          color: AppColors.warning,
-                          label: 'Warning Threshold',
-                          range: '50% – 80%',
-                          description: 'Prepare to empty',
-                        ),
-                        const Divider(height: AppSpacing.lg),
-                        const _ThresholdLegendRow(
-                          color: AppColors.error,
-                          label: 'Critical Overflow',
-                          range: '> 80%',
-                          description: 'Immediate action required',
-                        ),
-                        const Divider(height: AppSpacing.lg),
-                        const _ThresholdLegendRow(
-                          color: AppColors.textTertiary,
-                          label: 'Unavailable / Offline',
-                          range: 'Unavailable',
-                          description: 'Fill sensor probe offline / null echo',
-                        ),
-                      ],
-                    ),
-                  ),
-                  AppSpacing.gapH20,
-
-                  // Sensor Diagnostic Specifications
-                  Container(
-                    padding: AppSpacing.paddingCard,
-                    decoration: BoxDecoration(
-                      color: AppColors.slateSurfaceCard,
-                      borderRadius: AppRadii.borderRadiusLg,
-                      border: Border.all(color: AppColors.slateOutlineVariant),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'ESP32 Dual Sensor Specifications',
-                          style: AppTextStyles.titleSmall,
-                        ),
-                        AppSpacing.gapH12,
-                        _MetricLine(
-                          label: 'Hand Proximity Sensor',
-                          value: status.handSensorOk == true
-                              ? 'Healthy (HC-SR04)'
-                              : (status.handSensorOk == false
-                                    ? 'Failure / Offline'
-                                    : 'Not reported'),
-                        ),
-                        _MetricLine(
-                          label: 'Hand Distance Echo',
+                        _DiagnosticLine(
+                          label: 'Hand Sensor Echo',
                           value: status.handDistanceCm != null
                               ? '${status.handDistanceCm!.toStringAsFixed(1)} cm'
                               : (status.handSensorOk == false
-                                    ? 'Sensor Failure'
-                                    : 'Out of range (>400cm)'),
+                                    ? 'Unavailable'
+                                    : 'Out of range'),
                         ),
-                        _MetricLine(
-                          label: 'Internal Fill Sensor',
-                          value: status.fillSensorOk == true
-                              ? 'Healthy (HC-SR04)'
-                              : (status.fillSensorOk == false
-                                    ? 'Failure / Offline'
-                                    : 'Not reported'),
-                        ),
-                        _MetricLine(
-                          label: 'Fill Depth Echo',
+                        _DiagnosticLine(
+                          label: 'Fill Sensor Depth',
                           value: status.fillDistanceCm != null
                               ? '${status.fillDistanceCm!.toStringAsFixed(1)} cm'
                               : (status.fillSensorOk == false
-                                    ? 'Sensor Failure'
-                                    : 'Unavailable'),
+                                    ? 'Unavailable'
+                                    : (fill != null
+                                          ? '${fill.toStringAsFixed(0)}%'
+                                          : 'Unavailable')),
                         ),
-                        _MetricLine(
+                        _DiagnosticLine(
                           label: 'Poll Cycle',
-                          value: 'Continuous (5.0s interval)',
+                          value: '5.0s continuous',
                         ),
-                        _MetricLine(
-                          label: 'Bin Depth Calibration',
-                          value: '65.0 cm (Total Depth)',
+                        _DiagnosticLine(
+                          label: 'Total Calibration Depth',
+                          value: '65.0 cm',
                         ),
                       ],
                     ),
@@ -396,10 +233,9 @@ class MonitoringScreen extends ConsumerWidget {
   }
 }
 
-class _SensorTelemetryBox extends StatelessWidget {
-  const _SensorTelemetryBox({
+class _SensorTelemetryItem extends StatelessWidget {
+  const _SensorTelemetryItem({
     required this.title,
-    required this.subtitle,
     required this.icon,
     required this.isOk,
     required this.primaryMetric,
@@ -407,7 +243,6 @@ class _SensorTelemetryBox extends StatelessWidget {
   });
 
   final String title;
-  final String subtitle;
   final IconData icon;
   final bool? isOk;
   final String primaryMetric;
@@ -425,126 +260,55 @@ class _SensorTelemetryBox extends StatelessWidget {
         ? 'HEALTHY'
         : isOk == false
         ? 'FAILURE'
-        : 'UNKNOWN';
+        : 'UNREPORTED';
 
-    return Container(
-      padding: AppSpacing.paddingCard,
-      decoration: BoxDecoration(
-        color: AppColors.slateSurfaceVariant,
-        borderRadius: AppRadii.borderRadiusMd,
-        border: Border.all(
-          color: isOk == false
-              ? AppColors.error.withValues(alpha: 0.6)
-              : AppColors.slateOutlineVariant,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: AppColors.mintGreen, size: 20),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: healthColor.withValues(alpha: 0.15),
-                  borderRadius: AppRadii.borderRadiusXs,
-                  border: Border.all(color: healthColor.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: healthColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      healthLabel,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: healthColor,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 9,
-                      ),
-                    ),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, color: healthColor, size: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: healthColor.withValues(alpha: 0.15),
+                borderRadius: AppRadii.borderRadiusXs,
+              ),
+              child: Text(
+                healthLabel,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: healthColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 9,
+                  letterSpacing: 0.3,
                 ),
               ),
-            ],
-          ),
-          AppSpacing.gapH8,
-          Text(title, style: AppTextStyles.titleSmall),
-          Text(
-            subtitle,
-            style: AppTextStyles.bodySmall.copyWith(
-              fontSize: 10,
-              color: AppColors.textTertiary,
             ),
-          ),
-          AppSpacing.gapH8,
-          Text(
-            primaryMetric,
-            style: AppTextStyles.headlineSmall.copyWith(
-              color: isOk == false ? AppColors.error : AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          AppSpacing.gapH4,
-          Text(
-            statusDetail,
-            style: AppTextStyles.bodySmall.copyWith(
-              fontSize: 11,
-              color: isOk == false ? AppColors.error : AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ThresholdLegendRow extends StatelessWidget {
-  const _ThresholdLegendRow({
-    required this.color,
-    required this.label,
-    required this.range,
-    required this.description,
-  });
-
-  final Color color;
-  final String label;
-  final String range;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ],
         ),
-        AppSpacing.gapW12,
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: AppTextStyles.titleSmall),
-              Text(description, style: AppTextStyles.bodySmall),
-            ],
-          ),
-        ),
+        const SizedBox(height: 6),
         Text(
-          range,
-          style: AppTextStyles.labelLarge.copyWith(
-            color: color,
+          title,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        AppSpacing.gapH4,
+        Text(
+          primaryMetric,
+          style: AppTextStyles.titleMedium.copyWith(
+            color: isOk == false ? AppColors.error : AppColors.textPrimary,
             fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          statusDetail,
+          style: AppTextStyles.bodySmall.copyWith(
+            fontSize: 11,
+            color: isOk == false ? AppColors.error : AppColors.textTertiary,
           ),
         ),
       ],
@@ -552,8 +316,8 @@ class _ThresholdLegendRow extends StatelessWidget {
   }
 }
 
-class _MetricLine extends StatelessWidget {
-  const _MetricLine({required this.label, required this.value});
+class _DiagnosticLine extends StatelessWidget {
+  const _DiagnosticLine({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -561,14 +325,19 @@ class _MetricLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTextStyles.bodyMedium),
+          Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
           Text(
             value,
-            style: AppTextStyles.bodyMedium.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
             ),

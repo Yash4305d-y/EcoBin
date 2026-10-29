@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_card.dart';
+import '../../core/widgets/pressable_scale.dart';
 import '../../data/providers/settings_provider.dart';
 import '../../data/services/settings_service.dart';
 
@@ -59,26 +60,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AppSpacing.gapH24,
+              AppSpacing.gapH32,
 
               // App Hero Branding
               Center(
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
                     color: AppColors.mintGreenContainer,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.mintGreen, width: 2),
+                    border: Border.all(
+                      color: AppColors.mintGreen.withValues(alpha: 0.6),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.mintGreen.withValues(alpha: 0.12),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.recycling_rounded,
                     color: AppColors.mintGreen,
-                    size: 44,
+                    size: 38,
                   ),
                 ),
               ),
-              AppSpacing.gapH16,
+              AppSpacing.gapH20,
 
               const Text(
                 'Welcome to EcoBin',
@@ -86,53 +97,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 textAlign: TextAlign.center,
               ),
               AppSpacing.gapH8,
-              const Text(
-                'Smart contactless waste monitoring and lid actuation for ESP32-based IoT bins.',
-                style: AppTextStyles.bodyMedium,
+              Text(
+                'Smart contactless waste monitoring and actuation companion.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
                 textAlign: TextAlign.center,
               ),
               AppSpacing.gapH32,
 
-              // Highlights List
-              Container(
-                padding: AppSpacing.paddingCard,
-                decoration: BoxDecoration(
-                  color: AppColors.slateSurface,
-                  borderRadius: AppRadii.borderRadiusLg,
-                  border: Border.all(color: AppColors.slateOutlineVariant),
-                ),
-                child: const Column(
-                  children: [
-                    _FeatureRow(
-                      icon: Icons.sensors_rounded,
-                      title: 'Ultrasonic Telemetry',
-                      subtitle: 'Accurate continuous bin fill-level sensing.',
-                    ),
-                    Divider(height: AppSpacing.xl),
-                    _FeatureRow(
-                      icon: Icons.touch_app_rounded,
-                      title: 'Dual Operating Modes',
-                      subtitle: 'Switch between Automatic trigger and Manual locking.',
-                    ),
-                    Divider(height: AppSpacing.xl),
-                    _FeatureRow(
-                      icon: Icons.shield_outlined,
-                      title: 'Local Privacy First',
-                      subtitle: 'Direct local WiFi communication with no third-party cloud required.',
-                    ),
-                  ],
-                ),
-              ),
-              AppSpacing.gapH24,
-
-              // Hardware Setup Card
-              Container(
-                padding: AppSpacing.paddingCard,
-                decoration: BoxDecoration(
-                  color: AppColors.slateSurfaceCard,
-                  borderRadius: AppRadii.borderRadiusLg,
-                  border: Border.all(color: AppColors.slateOutlineVariant),
-                ),
+              // Device IP Connection Card
+              AppCard(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -141,11 +117,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       style: AppTextStyles.titleSmall,
                     ),
                     AppSpacing.gapH4,
-                    const Text(
-                      'Ensure your phone is connected to the bin\'s Wi-Fi network (or local network), then enter the ESP32 IP address below.',
-                      style: AppTextStyles.bodySmall,
+                    Text(
+                      'Enter your ESP32 device IP address to connect on your local network.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                    AppSpacing.gapH12,
+                    AppSpacing.gapH16,
                     TextField(
                       controller: _ipController,
                       decoration: InputDecoration(
@@ -161,57 +139,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
               AppSpacing.gapH24,
 
-              // Action Button
-              FilledButton.icon(
-                onPressed: _handleSaveAndContinue,
-                icon: const Icon(Icons.wifi_rounded),
-                label: const Text('Connect to EcoBin'),
+              // Connect Action Button
+              PressableScale(
+                onTap: _handleSaveAndContinue,
+                child: FilledButton.icon(
+                  onPressed: _handleSaveAndContinue,
+                  icon: const Icon(Icons.wifi_rounded, size: 18),
+                  label: const Text('Connect to EcoBin'),
+                ),
               ),
               AppSpacing.gapH16,
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _FeatureRow extends StatelessWidget {
-  const _FeatureRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: AppColors.slateSurfaceVariant,
-            borderRadius: AppRadii.borderRadiusSm,
-          ),
-          child: Icon(icon, color: AppColors.mintGreen, size: 20),
-        ),
-        AppSpacing.gapW12,
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppTextStyles.titleSmall),
-              AppSpacing.gapH4,
-              Text(subtitle, style: AppTextStyles.bodySmall),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

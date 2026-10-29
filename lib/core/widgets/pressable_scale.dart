@@ -3,15 +3,15 @@ import 'package:flutter/services.dart';
 
 import '../theme/app_motion.dart';
 
-/// A button wrapper that scales down to ~0.96 on press and provides
-/// subtle haptic feedback for deliberate user actions.
+/// A button wrapper that scales down to 0.97 on press and provides
+/// subtle light haptic feedback for deliberate, responsive interactions.
 class PressableScale extends StatefulWidget {
   const PressableScale({
     super.key,
     required this.child,
     required this.onTap,
     this.enabled = true,
-    this.targetScale = 0.96,
+    this.targetScale = 0.97,
     this.enableHaptic = true,
   });
 
@@ -60,7 +60,7 @@ class _PressableScaleState extends State<PressableScale> {
       child: AnimatedScale(
         scale: _isPressed && widget.enabled ? widget.targetScale : 1.0,
         duration: duration,
-        curve: AppMotion.stateChangeCurve,
+        curve: AppMotion.snappyCurve,
         child: widget.child,
       ),
     );

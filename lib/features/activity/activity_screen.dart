@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_card.dart';
 import '../../data/models/device_event.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -68,20 +69,72 @@ class ActivityScreen extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _SummaryBox(
-                      title: 'Since Boot',
-                      stat: '$todayCount Openings',
-                      detail: 'Firmware opening counter',
-                      icon: Icons.repeat_rounded,
+                    child: AppCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.md,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.repeat_rounded,
+                                size: 15,
+                                color: AppColors.mintGreen,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Since Boot',
+                                style: AppTextStyles.labelSmall,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '$todayCount Openings',
+                            style: AppTextStyles.titleMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   AppSpacing.gapW12,
                   Expanded(
-                    child: _SummaryBox(
-                      title: 'Current Session',
-                      stat: '${eventsList.length} Events',
-                      detail: 'Observed while active',
-                      icon: Icons.history_rounded,
+                    child: AppCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.md,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.history_rounded,
+                                size: 15,
+                                color: AppColors.mintGreen,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Current Session',
+                                style: AppTextStyles.labelSmall,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${eventsList.length} Events',
+                            style: AppTextStyles.titleMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -99,170 +152,124 @@ class ActivityScreen extends ConsumerWidget {
                 error: (err, _) => Center(child: Text('Error: $err')),
                 data: (events) {
                   if (events.isEmpty) {
-                    return Container(
-                      padding: AppSpacing.paddingCard,
-                      decoration: BoxDecoration(
-                        color: AppColors.slateSurface,
-                        borderRadius: AppRadii.borderRadiusLg,
-                        border: Border.all(
-                          color: AppColors.slateOutlineVariant,
-                        ),
+                    return AppCard(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.xxl,
+                        horizontal: AppSpacing.lg,
                       ),
                       child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.lg,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.history_rounded,
-                                size: 40,
-                                color: AppColors.textTertiary,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.history_rounded,
+                              size: 36,
+                              color: AppColors.textTertiary,
+                            ),
+                            AppSpacing.gapH12,
+                            Text(
+                              'No activity yet',
+                              style: AppTextStyles.titleSmall.copyWith(
+                                color: AppColors.textPrimary,
                               ),
-                              AppSpacing.gapH12,
-                              Text(
-                                'No activity yet',
-                                style: AppTextStyles.titleSmall.copyWith(
-                                  color: AppColors.textPrimary,
-                                ),
+                            ),
+                            AppSpacing.gapH4,
+                            Text(
+                              'Events observed will appear here.',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
                               ),
-                              AppSpacing.gapH4,
-                              Text(
-                                'Events observed while connected to EcoBin will appear here.',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
                     );
                   }
 
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: events.length,
-                    separatorBuilder: (context, index) => AppSpacing.gapH8,
-                    itemBuilder: (context, index) {
-                      final event = events[index];
-                      final color = _getEventColor(event.type);
+                  return AppCard(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: events.length,
+                      separatorBuilder: (context, index) => Divider(
+                        color: AppColors.slateOutlineVariant.withValues(
+                          alpha: 0.35,
+                        ),
+                        height: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final event = events[index];
+                        final color = _getEventColor(event.type);
 
-                      return Container(
-                        padding: AppSpacing.paddingCard,
-                        decoration: BoxDecoration(
-                          color: AppColors.slateSurface,
-                          borderRadius: AppRadii.borderRadiusMd,
-                          border: Border.all(
-                            color: AppColors.slateOutlineVariant,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.sm,
                           ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(AppSpacing.sm),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.15),
-                                borderRadius: AppRadii.borderRadiusSm,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.xs),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.12),
+                                  borderRadius: AppRadii.borderRadiusSm,
+                                ),
+                                child: Icon(
+                                  _getEventIcon(event.type),
+                                  color: color,
+                                  size: 16,
+                                ),
                               ),
-                              child: Icon(
-                                _getEventIcon(event.type),
-                                color: color,
-                                size: 18,
-                              ),
-                            ),
-                            AppSpacing.gapW12,
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        event.title,
-                                        style: AppTextStyles.titleSmall,
+                              AppSpacing.gapW12,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          event.title,
+                                          style: AppTextStyles.titleSmall,
+                                        ),
+                                        Text(
+                                          _formatRelativeTime(event.timestamp),
+                                          style: AppTextStyles.labelSmall
+                                              .copyWith(
+                                                color: AppColors.textTertiary,
+                                                fontSize: 10,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      event.description,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12,
                                       ),
-                                      Text(
-                                        _formatRelativeTime(event.timestamp),
-                                        style: AppTextStyles.labelSmall
-                                            .copyWith(
-                                              color: AppColors.textTertiary,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                  AppSpacing.gapH4,
-                                  Text(
-                                    event.description,
-                                    style: AppTextStyles.bodySmall,
-                                  ),
-                                ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SummaryBox extends StatelessWidget {
-  const _SummaryBox({
-    required this.title,
-    required this.stat,
-    required this.detail,
-    required this.icon,
-  });
-
-  final String title;
-  final String stat;
-  final String detail;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: AppSpacing.paddingCard,
-      decoration: BoxDecoration(
-        color: AppColors.slateSurface,
-        borderRadius: AppRadii.borderRadiusLg,
-        border: Border.all(color: AppColors.slateOutlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: AppColors.mintGreen),
-              AppSpacing.gapW8,
-              Text(title, style: AppTextStyles.labelSmall),
-            ],
-          ),
-          AppSpacing.gapH8,
-          Text(
-            stat,
-            style: AppTextStyles.titleMedium.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(detail, style: AppTextStyles.bodySmall),
-        ],
       ),
     );
   }

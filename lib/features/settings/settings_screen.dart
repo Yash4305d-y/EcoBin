@@ -5,6 +5,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_card.dart';
+import '../../core/widgets/pressable_scale.dart';
 import '../../data/providers/device_provider.dart';
 import '../../data/providers/settings_provider.dart';
 import '../../data/services/settings_service.dart';
@@ -79,7 +81,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             AppSpacing.gapW16,
             Expanded(
               child: Text(
-                'Probing GET /api/health...',
+                'Connecting to EcoBin...',
                 style: AppTextStyles.bodyMedium,
               ),
             ),
@@ -114,7 +116,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Connection confirmed with EcoBin at $ip.',
+                'Connected to EcoBin at $ip.',
                 style: AppTextStyles.bodyMedium,
               ),
               AppSpacing.gapH8,
@@ -171,8 +173,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: AppColors.error,
                 ),
               ),
+              AppSpacing.gapH8,
               const Text(
-                'Troubleshooting:\n• Ensure EcoBin is powered on.\n• Verify phone is connected to the same Wi-Fi / SoftAP.\n• Check that the IP address matches your device.',
+                'Check that EcoBin is powered on and connected to the same local Wi-Fi.',
                 style: AppTextStyles.bodySmall,
               ),
             ],
@@ -199,13 +202,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ESP32 IP Configuration Card
-              Container(
-                padding: AppSpacing.paddingCard,
-                decoration: BoxDecoration(
-                  color: AppColors.slateSurface,
-                  borderRadius: AppRadii.borderRadiusLg,
-                  border: Border.all(color: AppColors.slateOutlineVariant),
-                ),
+              AppCard(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -213,16 +211,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       'ESP32 Device IP Address',
                       style: AppTextStyles.titleSmall,
                     ),
-                    AppSpacing.gapH4,
-                    const Text(
-                      'Used for local network communication and command dispatch.',
-                      style: AppTextStyles.bodySmall,
-                    ),
                     AppSpacing.gapH12,
                     TextField(
                       controller: _ipController,
                       decoration: InputDecoration(
-                        labelText: 'Local Network IP Address',
+                        labelText: 'IP Address',
                         hintText: '192.168.4.1',
                         prefixIcon: const Icon(Icons.settings_ethernet_rounded),
                         errorText: _ipError,
@@ -239,18 +232,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _handleSaveIp,
-                            icon: const Icon(Icons.save_outlined),
-                            label: const Text('Save IP'),
+                          child: PressableScale(
+                            onTap: _handleSaveIp,
+                            child: FilledButton.icon(
+                              onPressed: _handleSaveIp,
+                              icon: const Icon(Icons.save_outlined, size: 18),
+                              label: const Text('Save IP'),
+                            ),
                           ),
                         ),
                         AppSpacing.gapW12,
                         Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _handleTestConnection,
-                            icon: const Icon(Icons.network_check_rounded),
-                            label: const Text('Test Connection'),
+                          child: PressableScale(
+                            onTap: _handleTestConnection,
+                            child: OutlinedButton.icon(
+                              onPressed: _handleTestConnection,
+                              icon: const Icon(
+                                Icons.network_check_rounded,
+                                size: 18,
+                              ),
+                              label: const Text('Test Connection'),
+                            ),
                           ),
                         ),
                       ],
@@ -258,164 +260,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
               ),
-              AppSpacing.gapH20,
+              AppSpacing.gapH16,
 
-              // Diagnostics & Debug Logs Navigation (Secondary Menu Item)
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.slateSurface,
-                  borderRadius: AppRadii.borderRadiusLg,
-                  border: Border.all(color: AppColors.slateOutlineVariant),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  borderRadius: AppRadii.borderRadiusLg,
-                  child: InkWell(
-                    onTap: widget.onOpenDebugLogs,
-                    borderRadius: AppRadii.borderRadiusLg,
-                    child: Padding(
-                      padding: AppSpacing.paddingCard,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(AppSpacing.sm),
-                            decoration: BoxDecoration(
-                              color: AppColors.slateSurfaceVariant,
-                              borderRadius: AppRadii.borderRadiusSm,
-                            ),
-                            child: const Icon(
-                              Icons.terminal_rounded,
-                              color: AppColors.mintGreen,
-                              size: 20,
-                            ),
+              // Diagnostics & Debug Logs Navigation Tile
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: PressableScale(
+                  onTap: widget.onOpenDebugLogs,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.xs),
+                          decoration: BoxDecoration(
+                            color: AppColors.mintGreen.withValues(alpha: 0.12),
+                            borderRadius: AppRadii.borderRadiusSm,
                           ),
-                          AppSpacing.gapW12,
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  'Diagnostics & Debug Logs',
-                                  style: AppTextStyles.titleSmall,
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'View real-time HTTP polling and command logs',
-                                  style: AppTextStyles.bodySmall,
-                                ),
-                              ],
-                            ),
+                          child: const Icon(
+                            Icons.terminal_rounded,
+                            color: AppColors.mintGreen,
+                            size: 18,
                           ),
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            color: AppColors.textTertiary,
+                        ),
+                        AppSpacing.gapW12,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'Diagnostics & Debug Logs',
+                                style: AppTextStyles.titleSmall,
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Real-time telemetry and network transactions',
+                                style: AppTextStyles.bodySmall,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.textTertiary,
+                          size: 18,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ),
-              AppSpacing.gapH20,
-
-              // Connection Troubleshooting Guide
-              Container(
-                padding: AppSpacing.paddingCard,
-                decoration: BoxDecoration(
-                  color: AppColors.slateSurfaceCard,
-                  borderRadius: AppRadii.borderRadiusLg,
-                  border: Border.all(color: AppColors.slateOutlineVariant),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.help_outline_rounded,
-                          color: AppColors.mintGreen,
-                          size: 20,
-                        ),
-                        AppSpacing.gapW8,
-                        Text(
-                          'ESP32 Setup & Troubleshooting',
-                          style: AppTextStyles.titleSmall,
-                        ),
-                      ],
-                    ),
-                    AppSpacing.gapH12,
-                    _TroubleshootStep(
-                      step: '1',
-                      title: 'Power & Firmware',
-                      description: 'Connect ESP32 via 5V 2A microUSB/Type-C. Ensure firmware is running and servo leads are connected to GPIO 18.',
-                    ),
-                    _TroubleshootStep(
-                      step: '2',
-                      title: 'SoftAP vs Station Mode',
-                      description: 'In SoftAP mode, connect phone to "EcoBin-AP" (IP 192.168.4.1). In Station mode, configure phone on the same 2.4GHz WiFi network.',
-                    ),
-                    _TroubleshootStep(
-                      step: '3',
-                      title: 'Cleartext HTTP Rule',
-                      description: 'Local ESP32 web servers do not use TLS certificates. Cleartext local traffic is explicitly permitted for local private IP subnets.',
-                    ),
-                  ],
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TroubleshootStep extends StatelessWidget {
-  const _TroubleshootStep({
-    required this.step,
-    required this.title,
-    required this.description,
-  });
-
-  final String step;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 22,
-            height: 22,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.slateSurfaceVariant,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              step,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.mintGreen,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          AppSpacing.gapW12,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.titleSmall),
-                const SizedBox(height: 2),
-                Text(description, style: AppTextStyles.bodySmall),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

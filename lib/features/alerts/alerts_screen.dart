@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/app_card.dart';
 import '../../data/models/app_alert.dart';
 import '../../data/providers/device_provider.dart';
 
@@ -53,7 +54,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Filter Chips
+              // Filter Chips Row
               Row(
                 children: [
                   _FilterChip(
@@ -85,15 +86,18 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                       margin: const EdgeInsets.only(bottom: AppSpacing.md),
                       padding: AppSpacing.paddingCard,
                       decoration: BoxDecoration(
-                        color: AppColors.errorContainer.withValues(alpha: 0.3),
+                        color: AppColors.errorContainer.withValues(alpha: 0.2),
                         borderRadius: AppRadii.borderRadiusMd,
-                        border: Border.all(color: AppColors.error),
+                        border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.6),
+                        ),
                       ),
                       child: Row(
                         children: const [
                           Icon(
                             Icons.sensors_off_rounded,
                             color: AppColors.error,
+                            size: 20,
                           ),
                           AppSpacing.gapW12,
                           Expanded(
@@ -166,27 +170,20 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                   }).toList();
 
                   if (filtered.isEmpty) {
-                    return Container(
+                    return AppCard(
                       padding: const EdgeInsets.symmetric(
                         vertical: AppSpacing.xxxl,
                         horizontal: AppSpacing.lg,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.slateSurface,
-                        borderRadius: AppRadii.borderRadiusLg,
-                        border: Border.all(
-                          color: AppColors.slateOutlineVariant,
-                        ),
                       ),
                       child: Column(
                         children: const [
                           Icon(
                             Icons.check_circle_outline_rounded,
-                            size: 48,
+                            size: 40,
                             color: AppColors.mintGreen,
                           ),
                           AppSpacing.gapH12,
-                          Text('All Clear!', style: AppTextStyles.titleMedium),
+                          Text('All Clear', style: AppTextStyles.titleMedium),
                           AppSpacing.gapH4,
                           Text(
                             'No active warnings or unresolved alerts.',
@@ -206,20 +203,14 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                       final alert = filtered[index];
                       final color = _getSeverityColor(alert.severity);
 
-                      return Container(
+                      return AppCard(
                         padding: AppSpacing.paddingCard,
-                        decoration: BoxDecoration(
-                          color: AppColors.slateSurface,
-                          borderRadius: AppRadii.borderRadiusMd,
-                          border: Border.all(
-                            color: color.withValues(alpha: 0.3),
-                          ),
-                        ),
+                        borderColor: color.withValues(alpha: 0.35),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              padding: const EdgeInsets.all(AppSpacing.xs),
                               decoration: BoxDecoration(
                                 color: color.withValues(alpha: 0.15),
                                 borderRadius: AppRadii.borderRadiusSm,
@@ -227,7 +218,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                               child: Icon(
                                 _getSeverityIcon(alert.severity),
                                 color: color,
-                                size: 20,
+                                size: 18,
                               ),
                             ),
                             AppSpacing.gapW12,
@@ -245,8 +236,8 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: AppSpacing.xs,
-                                          vertical: 2,
+                                          horizontal: 5,
+                                          vertical: 1.5,
                                         ),
                                         decoration: BoxDecoration(
                                           color: AppColors.mintGreenContainer,
@@ -259,7 +250,8 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                                 color: AppColors
                                                     .onMintGreenContainer,
                                                 fontWeight: FontWeight.w700,
-                                                fontSize: 9,
+                                                fontSize: 8,
+                                                letterSpacing: 0.3,
                                               ),
                                         ),
                                       ),
@@ -268,7 +260,9 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                                   AppSpacing.gapH4,
                                   Text(
                                     alert.message,
-                                    style: AppTextStyles.bodySmall,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -276,7 +270,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                             IconButton(
                               icon: const Icon(
                                 Icons.close_rounded,
-                                size: 18,
+                                size: 16,
                                 color: AppColors.textTertiary,
                               ),
                               onPressed: () async {
@@ -293,33 +287,6 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                     },
                   );
                 },
-              ),
-              AppSpacing.gapH24,
-
-              // Information card about push notifications
-              Container(
-                padding: AppSpacing.paddingCard,
-                decoration: BoxDecoration(
-                  color: AppColors.slateSurfaceCard,
-                  borderRadius: AppRadii.borderRadiusLg,
-                  border: Border.all(color: AppColors.slateOutlineVariant),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(
-                      Icons.notifications_off_outlined,
-                      color: AppColors.textTertiary,
-                      size: 20,
-                    ),
-                    AppSpacing.gapW12,
-                    Expanded(
-                      child: Text(
-                        'Push notifications are out of scope for local ESP32 integration. Alerts operate within the in-app telemetry lifecycle only.',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
@@ -352,7 +319,11 @@ class _FilterChip extends StatelessWidget {
       ),
       selectedColor: AppColors.mintGreen,
       backgroundColor: AppColors.slateSurfaceVariant,
-      side: const BorderSide(color: AppColors.slateOutlineVariant),
+      side: BorderSide(
+        color: selected
+            ? AppColors.mintGreen
+            : AppColors.slateOutlineVariant.withValues(alpha: 0.6),
+      ),
     );
   }
 }
