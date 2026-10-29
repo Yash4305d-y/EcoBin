@@ -36,16 +36,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _handleSaveAndContinue() async {
-    final ip = _ipController.text.trim();
-    if (!SettingsService.isValidIpv4(ip)) {
+    final cleanIp = SettingsService.sanitizeIp(_ipController.text);
+    if (!SettingsService.isValidIpv4(cleanIp)) {
       setState(() {
-        _ipError = 'Please enter a valid IPv4 address (e.g. 192.168.4.1)';
+        _ipError = 'Please enter a valid IPv4 address (e.g. 10.236.242.197)';
       });
       return;
     }
 
     setState(() => _ipError = null);
-    await ref.read(settingsProvider.notifier).updateDeviceIp(ip);
+    await ref.read(settingsProvider.notifier).updateDeviceIp(cleanIp);
     await ref.read(settingsProvider.notifier).setDemoMode(false);
     await ref.read(settingsProvider.notifier).completeOnboarding();
     widget.onFinished();
@@ -128,7 +128,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       controller: _ipController,
                       decoration: InputDecoration(
                         labelText: 'ESP32 IP Address',
-                        hintText: '192.168.4.1',
+                        hintText: '10.236.242.197',
                         prefixIcon: const Icon(Icons.wifi_rounded, size: 20),
                         errorText: _ipError,
                       ),

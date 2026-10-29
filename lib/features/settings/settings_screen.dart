@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/device_exceptions.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
@@ -42,26 +43,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _handleSaveIp() async {
-    final ip = _ipController.text.trim();
-    if (!SettingsService.isValidIpv4(ip)) {
+    final cleanIp = SettingsService.sanitizeIp(_ipController.text);
+    if (!SettingsService.isValidIpv4(cleanIp)) {
       setState(() {
-        _ipError = 'Please enter a valid IPv4 address (e.g. 192.168.4.1)';
+        _ipError = 'Please enter a valid IPv4 address (e.g. 10.236.242.197)';
         _savedFeedback = false;
       });
       return;
     }
 
+    _ipController.text = cleanIp;
     setState(() {
       _ipError = null;
       _savedFeedback = true;
     });
 
-    await ref.read(settingsProvider.notifier).updateDeviceIp(ip);
+    await ref.read(settingsProvider.notifier).updateDeviceIp(cleanIp);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Saved ESP32 IP: $ip'),
+          content: Text('Saved ESP IP: $cleanIp'),
           backgroundColor: AppColors.successContainer,
           duration: const Duration(seconds: 2),
         ),
@@ -70,6 +72,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _handleTestConnection() async {
+    // If user edited IP in controller, sanitize and auto-save it
+    final enteredCleanIp = SettingsService.sanitizeIp(_ipController.text);
+    if (enteredCleanIp.isNotEmpty &&
+        SettingsService.isValidIpv4(enteredCleanIp)) {
+      _ipController.text = enteredCleanIp;
+      if (enteredCleanIp != ref.read(settingsProvider).deviceIp) {
+        await ref
+            .read(settingsProvider.notifier)
+            .updateDeviceIp(enteredCleanIp);
+      }
+    }
+
+    if (!mounted) return;
+
     final settings = ref.read(settingsProvider);
     final ip = settings.deviceIp;
 
@@ -124,11 +140,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               AppSpacing.gapH8,
               Text(
-                'Device: ${result["device"] ?? "ecobin-esp32"}',
+                'Device: ${result["device"] ?? "ecobin-esp8266"}',
                 style: AppTextStyles.bodySmall,
               ),
               Text(
-                'Firmware: ${result["firmware"] ?? "1.0.0"}',
+                'Firmware: ${result["firmware"] ?? "1.0.2"}',
                 style: AppTextStyles.bodySmall,
               ),
               if (result["uptime_seconds"] != null)
@@ -150,6 +166,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
 
+      final errorDetails =
+          (e is DeviceConnectionException && e.originalError != null)
+          ? '${e.message}\n(${e.originalError})'
+          : e.toString();
+
+      debugPrint(
+        '[SettingsScreen] Connection test failed for $ip: $errorDetails',
+      );
+
       showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
@@ -170,15 +195,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Could not reach ESP32 at http://$ip',
+                'Could not reach device at http://$ip',
                 style: AppTextStyles.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.error,
                 ),
               ),
               AppSpacing.gapH8,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceNearBlack,
+                  borderRadius: AppRadii.borderRadiusSm,
+                  border: Border.all(color: AppColors.slateOutlineVariant),
+                ),
+                child: Text(
+                  errorDetails,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+              AppSpacing.gapH8,
               const Text(
-                'Check that EcoBin is powered on and connected to the same local Wi-Fi.',
+                'Check that EcoBin is powered on and your phone is connected to the same Wi-Fi.',
                 style: AppTextStyles.bodySmall,
               ),
             ],
@@ -219,7 +262,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       controller: _ipController,
                       decoration: InputDecoration(
                         labelText: 'IP Address',
-                        hintText: '192.168.4.1',
+                        hintText: '10.236.242.197',
                         prefixIcon: const Icon(Icons.settings_ethernet_rounded),
                         errorText: _ipError,
                         suffixIcon: _savedFeedback

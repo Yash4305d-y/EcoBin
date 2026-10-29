@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/constants/app_constants.dart';
@@ -10,20 +11,21 @@ import '../../core/utils/dustbin_fill_calculator.dart';
 import '../models/device_status.dart';
 import 'settings_service.dart';
 
-/// Low-level HTTP communication client targeting the ESP32 microcontroller endpoints.
+/// Low-level HTTP communication client targeting the ESP32/ESP8266 microcontroller endpoints.
 class DeviceApiService {
   DeviceApiService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
 
   Uri _buildUri(String ipAddress, String path) {
-    final cleanIp = ipAddress.trim();
+    final cleanIp = SettingsService.sanitizeIp(ipAddress);
     if (!SettingsService.isValidIpv4(cleanIp)) {
       throw DeviceConnectionException(
-        'Invalid IPv4 address format: "$ipAddress". Expected format: 192.168.4.1',
+        'Invalid IPv4 address format: "$ipAddress". Expected format: 10.236.242.197',
       );
     }
-    return Uri.parse('http://$cleanIp$path');
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    return Uri.parse('http://$cleanIp$normalizedPath');
   }
 
   Future<http.Response> _sendRequest(
@@ -33,26 +35,26 @@ class DeviceApiService {
     try {
       return await requestFn().timeout(AppConstants.httpTimeout);
     } on TimeoutException catch (e) {
-      throw DeviceConnectionException(
-        'Request to $endpoint timed out after ${AppConstants.httpTimeout.inSeconds}s',
-        isTimeout: true,
-        originalError: e,
-      );
+      final msg =
+          'Request to $endpoint timed out after ${AppConstants.httpTimeout.inSeconds}s';
+      debugPrint('[DeviceApiService] $msg');
+      throw DeviceConnectionException(msg, isTimeout: true, originalError: e);
     } on SocketException catch (e) {
-      throw DeviceConnectionException(
-        'Failed to connect to ESP32 at $endpoint: ${e.message}',
-        originalError: e,
-      );
+      final osErr = e.osError != null
+          ? ' (OS Error: ${e.osError?.message}, errno: ${e.osError?.errorCode})'
+          : '';
+      final msg =
+          'Failed to connect to ESP8266 at $endpoint: ${e.message}$osErr';
+      debugPrint('[DeviceApiService] SocketException: $msg');
+      throw DeviceConnectionException(msg, originalError: e);
     } on http.ClientException catch (e) {
-      throw DeviceConnectionException(
-        'HTTP client transport failure on $endpoint: ${e.message}',
-        originalError: e,
-      );
-    } catch (e) {
-      throw DeviceConnectionException(
-        'Unexpected communication error on $endpoint: $e',
-        originalError: e,
-      );
+      final msg = 'HTTP client transport failure on $endpoint: ${e.message}';
+      debugPrint('[DeviceApiService] ClientException: $msg');
+      throw DeviceConnectionException(msg, originalError: e);
+    } catch (e, st) {
+      final msg = 'Unexpected communication error on $endpoint: $e';
+      debugPrint('[DeviceApiService] Exception: $msg\n$st');
+      throw DeviceConnectionException(msg, originalError: e);
     }
   }
 
@@ -82,6 +84,9 @@ class DeviceApiService {
     );
 
     if (response.statusCode != 200) {
+      debugPrint(
+        '[DeviceApiService] Health check failed with HTTP ${response.statusCode}: ${response.body}',
+      );
       throw DeviceApiException(
         'Health check failed with HTTP ${response.statusCode}',
         statusCode: response.statusCode,
@@ -105,6 +110,9 @@ class DeviceApiService {
     );
 
     if (response.statusCode != 200) {
+      debugPrint(
+        '[DeviceApiService] Telemetry poll failed with HTTP ${response.statusCode}: ${response.body}',
+      );
       throw DeviceApiException(
         'Telemetry poll failed with HTTP ${response.statusCode}',
         statusCode: response.statusCode,
@@ -121,7 +129,10 @@ class DeviceApiService {
         communicationTime: DateTime.now(),
         fillFilter: fillFilter,
       );
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint(
+        '[DeviceApiService] Failed to parse device status fields: $e\nResponse: ${response.body}\n$st',
+      );
       throw DeviceDataException(
         'Failed to parse device status fields: $e',
         originalError: e,

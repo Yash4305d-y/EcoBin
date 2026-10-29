@@ -120,9 +120,33 @@ class DeviceStatus {
     DateTime? communicationTime,
     RollingMedianFillFilter? fillFilter,
   }) {
-    if (!json.containsKey('lid_state') || !json.containsKey('mode')) {
+    final bool hasLid =
+        json.containsKey('lid_state') ||
+        json.containsKey('lid') ||
+        json.containsKey('state') ||
+        json.containsKey('lidState');
+    final bool hasMode =
+        json.containsKey('mode') ||
+        json.containsKey('operating_mode') ||
+        json.containsKey('operatingMode');
+
+    if (!hasLid || !hasMode) {
       throw const FormatException('Missing required fields: lid_state or mode');
     }
+
+    // Extract lid_state with resilient fallbacks
+    final dynamic rawLid =
+        json['lid_state'] ?? json['lid'] ?? json['state'] ?? json['lidState'];
+    final LidState parsedLidState = rawLid != null
+        ? LidState.fromString(rawLid.toString())
+        : LidState.unknown;
+
+    // Extract mode with resilient fallbacks
+    final dynamic rawMode =
+        json['mode'] ?? json['operating_mode'] ?? json['operatingMode'];
+    final OperatingMode parsedMode = rawMode != null
+        ? OperatingMode.fromString(rawMode.toString())
+        : OperatingMode.automatic;
 
     // Opening count: check openings_since_boot first, fallback to today_openings
     final dynamic rawOpenings =
@@ -208,8 +232,8 @@ class DeviceStatus {
       lastSuccessfulCommunication: now,
       deviceIp: deviceIp,
       fillPercentage: parsedFill,
-      lidState: LidState.fromString(json['lid_state']?.toString()),
-      mode: OperatingMode.fromString(json['mode']?.toString()),
+      lidState: parsedLidState,
+      mode: parsedMode,
       todayOpenings: openings,
       openingsSinceBoot: openings,
       batteryPercentage: battery,

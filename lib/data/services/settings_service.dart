@@ -6,14 +6,33 @@ class SettingsService {
   static const String keyDemoMode = 'ecobin_demo_mode_enabled';
   static const String keyOnboardingComplete = 'ecobin_onboarding_completed';
 
-  static const String defaultIp = '192.168.4.1';
+  static const String defaultIp = '10.236.242.197';
 
-  /// Validates standard IPv4 address format (e.g., 192.168.4.1).
+  /// Sanitizes user-entered IP strings by stripping URI schemes, paths, and ports.
+  static String sanitizeIp(String input) {
+    var clean = input.trim();
+    if (clean.startsWith('http://')) {
+      clean = clean.substring(7);
+    } else if (clean.startsWith('https://')) {
+      clean = clean.substring(8);
+    }
+    final slashIdx = clean.indexOf('/');
+    if (slashIdx != -1) {
+      clean = clean.substring(0, slashIdx);
+    }
+    final colonIdx = clean.indexOf(':');
+    if (colonIdx != -1) {
+      clean = clean.substring(0, colonIdx);
+    }
+    return clean.trim();
+  }
+
+  /// Validates standard IPv4 address format (e.g., 10.236.242.197).
   static bool isValidIpv4(String ip) {
-    final trimmed = ip.trim();
-    if (trimmed.isEmpty) return false;
+    final clean = sanitizeIp(ip);
+    if (clean.isEmpty) return false;
 
-    final parts = trimmed.split('.');
+    final parts = clean.split('.');
     if (parts.length != 4) {
       return false;
     }
@@ -32,12 +51,17 @@ class SettingsService {
 
   Future<String> getDeviceIp() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(keyEsp32Ip) ?? defaultIp;
+    final saved = prefs.getString(keyEsp32Ip);
+    if (saved == null || saved.trim() == '192.168.4.1') {
+      await prefs.setString(keyEsp32Ip, defaultIp);
+      return defaultIp;
+    }
+    return sanitizeIp(saved);
   }
 
   Future<void> saveDeviceIp(String ip) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(keyEsp32Ip, ip.trim());
+    await prefs.setString(keyEsp32Ip, sanitizeIp(ip));
   }
 
   Future<bool> isDemoMode() async {

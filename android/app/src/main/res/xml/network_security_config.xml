@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Permits cleartext HTTP communication for local ESP32 IoT endpoints -->
+    <!-- Permits cleartext HTTP communication globally for local IoT microcontroller endpoints -->
     <!-- while preserving standard TLS trust anchors for HTTPS -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
@@ -8,8 +8,9 @@
         </trust-anchors>
     </base-config>
 
-    <!-- Explicitly declare local SoftAP and emulator loopback domains -->
+    <!-- Explicitly declare local ESP8266/ESP32, SoftAP, and emulator domains -->
     <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.236.242.197</domain>
         <domain includeSubdomains="true">192.168.4.1</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">localhost</domain>

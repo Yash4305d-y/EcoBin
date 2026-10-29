@@ -158,7 +158,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       body: SafeArea(
         child: statusAsync.when(
           loading: _buildLoadingSkeleton,
-          error: (_, _) => Center(
+          error: (err, _) => Center(
             child: Padding(
               padding: AppSpacing.paddingCard,
               child: Column(
@@ -174,6 +174,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     "Couldn't connect to EcoBin",
                     style: AppTextStyles.titleMedium,
                     textAlign: TextAlign.center,
+                  ),
+                  AppSpacing.gapH8,
+                  Text(
+                    err.toString(),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.error,
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   AppSpacing.gapH8,
                   Text(

@@ -619,10 +619,30 @@ void main() {
       expect(logs.isNotEmpty, isTrue);
     });
 
-    test('SettingsService IPv4 validation helper', () {
+    test('SettingsService IPv4 validation and sanitization helper', () {
       expect(SettingsService.isValidIpv4('192.168.4.1'), isTrue);
       expect(SettingsService.isValidIpv4('10.0.0.1'), isTrue);
       expect(SettingsService.isValidIpv4('172.16.0.100'), isTrue);
+      expect(SettingsService.isValidIpv4('10.236.242.197'), isTrue);
+      expect(SettingsService.isValidIpv4('http://10.236.242.197'), isTrue);
+      expect(
+        SettingsService.isValidIpv4('http://10.236.242.197/api/health'),
+        isTrue,
+      );
+      expect(SettingsService.isValidIpv4('10.236.242.197:80'), isTrue);
+
+      expect(
+        SettingsService.sanitizeIp('http://10.236.242.197/api/status'),
+        equals('10.236.242.197'),
+      );
+      expect(
+        SettingsService.sanitizeIp('  10.236.242.197  '),
+        equals('10.236.242.197'),
+      );
+      expect(
+        SettingsService.sanitizeIp('http://10.236.242.197:80/'),
+        equals('10.236.242.197'),
+      );
 
       expect(SettingsService.isValidIpv4(''), isFalse);
       expect(SettingsService.isValidIpv4('256.0.0.1'), isFalse);

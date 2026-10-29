@@ -1,6 +1,8 @@
 // ignore_for_file: prefer_initializing_formals
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../../core/constants/app_constants.dart';
 import '../../core/errors/device_exceptions.dart';
 import '../../core/utils/dustbin_fill_calculator.dart';
@@ -175,6 +177,10 @@ class HttpDeviceRepository implements DeviceRepository {
       stopwatch.stop();
       _consecutiveFailures++;
 
+      debugPrint(
+        '[HttpDeviceRepository] Status poll FAILED (${stopwatch.elapsedMilliseconds}ms): ${e.message} (Failure $_consecutiveFailures/${AppConstants.maxConsecutivePollFailures})',
+      );
+
       _addLog(
         '[HTTP]',
         'GET /api/status FAILED (${stopwatch.elapsedMilliseconds}ms): ${e.message} (Failure $_consecutiveFailures/${AppConstants.maxConsecutivePollFailures})',
@@ -201,6 +207,9 @@ class HttpDeviceRepository implements DeviceRepository {
       }
     } on DeviceDataException catch (e) {
       stopwatch.stop();
+      debugPrint(
+        '[HttpDeviceRepository] GET /api/status -> Malformed data received (${stopwatch.elapsedMilliseconds}ms): ${e.message}',
+      );
       // Parse error: Server responded, but JSON was malformed.
       _addLog(
         '[HTTP_PARSE]',
@@ -211,6 +220,9 @@ class HttpDeviceRepository implements DeviceRepository {
     } on DeviceApiException catch (e) {
       stopwatch.stop();
       _consecutiveFailures++;
+      debugPrint(
+        '[HttpDeviceRepository] GET /api/status -> HTTP ${e.statusCode} (${stopwatch.elapsedMilliseconds}ms): ${e.responseBody}',
+      );
       _addLog(
         '[HTTP]',
         'GET /api/status -> HTTP ${e.statusCode} (${stopwatch.elapsedMilliseconds}ms)',
@@ -224,8 +236,11 @@ class HttpDeviceRepository implements DeviceRepository {
         );
         _statusController.add(_status);
       }
-    } catch (e) {
+    } catch (e, st) {
       stopwatch.stop();
+      debugPrint(
+        '[HttpDeviceRepository] Unexpected polling error (${stopwatch.elapsedMilliseconds}ms): $e\n$st',
+      );
       _addLog(
         '[POLLER]',
         'Unexpected polling error (${stopwatch.elapsedMilliseconds}ms): $e',
@@ -274,14 +289,20 @@ class HttpDeviceRepository implements DeviceRepository {
       return result;
     } on DeviceConnectionException catch (e) {
       stopwatch.stop();
+      debugPrint(
+        '[HttpDeviceRepository] GET /api/health FAILED (${stopwatch.elapsedMilliseconds}ms): ${e.message}',
+      );
       _addLog(
         '[HTTP]',
         'GET /api/health FAILED (${stopwatch.elapsedMilliseconds}ms): ${e.message}',
         LogSeverity.error,
       );
       rethrow;
-    } catch (e) {
+    } catch (e, st) {
       stopwatch.stop();
+      debugPrint(
+        '[HttpDeviceRepository] GET /api/health ERROR (${stopwatch.elapsedMilliseconds}ms): $e\n$st',
+      );
       _addLog(
         '[HTTP]',
         'GET /api/health ERROR (${stopwatch.elapsedMilliseconds}ms): $e',
