@@ -83,7 +83,9 @@ void main() {
       await tester.tap(find.byIcon(Icons.tune_outlined));
       await tester.pumpAndSettle();
       expect(find.text('Bin Actuation & Controls'), findsOneWidget);
-      expect(find.text('Open Lid'), findsOneWidget);
+      // In Automatic mode, manual controls are hidden
+      expect(find.text('Open Lid'), findsNothing);
+      expect(find.text('Close Lid'), findsNothing);
 
       // Tap Activity tab
       await tester.tap(find.byIcon(Icons.history_outlined));
@@ -104,7 +106,7 @@ void main() {
     });
 
     testWidgets(
-      'Controls screen disables Open Lid button when executing or lid is already open',
+      'Controls screen shows Open and Close Lid in Manual mode and follows lid state',
       (WidgetTester tester) async {
         SharedPreferences.setMockInitialValues({
           SettingsService.keyOnboardingComplete: true,
@@ -129,26 +131,66 @@ void main() {
         await tester.tap(find.byIcon(Icons.tune_outlined));
         await tester.pumpAndSettle();
 
-        // Initial state is closed lid, so 'Open Lid' is enabled
+        // In Automatic mode, manual Open/Close buttons are NOT shown
+        expect(find.text('Open Lid'), findsNothing);
+        expect(find.text('Close Lid'), findsNothing);
+
+        // Switch to Manual Mode
+        await tester.tap(find.text('Manual Mode'));
+        await tester.pumpAndSettle();
+
+        // Both Open Lid and Close Lid are now visible
+        expect(find.text('Open Lid'), findsOneWidget);
+        expect(find.text('Close Lid'), findsOneWidget);
+
+        // Initial state is closed lid, so 'Open Lid' is enabled and 'Close Lid' is disabled
         final openLidButton = tester.widget<FilledButton>(
           find.widgetWithText(FilledButton, 'Open Lid'),
         );
         expect(openLidButton.onPressed, isNotNull);
 
+        final closeLidButton = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Close Lid'),
+        );
+        expect(closeLidButton.onPressed, isNull);
+
         // Tap Open Lid
         await tester.tap(find.widgetWithText(FilledButton, 'Open Lid'));
-        // Pump initial frame to start async delay
         await tester.pump(const Duration(milliseconds: 100));
 
         // Wait for actuation to complete (600ms in MockDeviceRepository)
         await tester.pump(const Duration(milliseconds: 700));
         await tester.pumpAndSettle();
 
-        // Now lid should be open, so 'Open Lid' is disabled
+        // Now lid is open, so 'Open Lid' is disabled and 'Close Lid' is enabled
         final openLidButtonAfter = tester.widget<FilledButton>(
           find.widgetWithText(FilledButton, 'Open Lid'),
         );
         expect(openLidButtonAfter.onPressed, isNull);
+
+        final closeLidButtonAfter = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Close Lid'),
+        );
+        expect(closeLidButtonAfter.onPressed, isNotNull);
+
+        // Tap Close Lid
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Close Lid'));
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Wait for close actuation to complete
+        await tester.pump(const Duration(milliseconds: 700));
+        await tester.pumpAndSettle();
+
+        // Lid is closed again: 'Open Lid' is enabled, 'Close Lid' is disabled
+        final openLidButtonFinal = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Open Lid'),
+        );
+        expect(openLidButtonFinal.onPressed, isNotNull);
+
+        final closeLidButtonFinal = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Close Lid'),
+        );
+        expect(closeLidButtonFinal.onPressed, isNull);
       },
     );
 

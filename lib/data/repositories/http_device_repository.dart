@@ -3,6 +3,7 @@ import 'dart:async';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/errors/device_exceptions.dart';
+import '../../core/utils/dustbin_fill_calculator.dart';
 import '../models/app_alert.dart';
 import '../models/debug_log_entry.dart';
 import '../models/device_connection_state.dart';
@@ -18,8 +19,10 @@ class HttpDeviceRepository implements DeviceRepository {
     required DeviceApiService apiService,
     required String deviceIp,
     bool autoStartPolling = true,
+    RollingMedianFillFilter? fillFilter,
   }) : _apiService = apiService,
-       _deviceIp = deviceIp {
+       _deviceIp = deviceIp,
+       _fillFilter = fillFilter ?? RollingMedianFillFilter() {
     _status = DeviceStatus(
       isDemo: false,
       connectionStatus: DeviceConnectionStatus.connecting,
@@ -37,7 +40,10 @@ class HttpDeviceRepository implements DeviceRepository {
   }
 
   final DeviceApiService _apiService;
+  final RollingMedianFillFilter _fillFilter;
   String _deviceIp;
+
+  RollingMedianFillFilter get fillFilter => _fillFilter;
 
   late DeviceStatus _status;
   final StreamController<DeviceStatus> _statusController =
@@ -59,6 +65,7 @@ class HttpDeviceRepository implements DeviceRepository {
     if (_deviceIp != newIp) {
       _deviceIp = newIp.trim();
       _consecutiveFailures = 0;
+      _fillFilter.reset();
       _status = _status.copyWith(
         deviceIp: _deviceIp,
         connectionStatus: DeviceConnectionStatus.connecting,
@@ -121,7 +128,10 @@ class HttpDeviceRepository implements DeviceRepository {
     final stopwatch = Stopwatch()..start();
 
     try {
-      final fetchedStatus = await _apiService.getStatus(_deviceIp);
+      final fetchedStatus = await _apiService.getStatus(
+        _deviceIp,
+        fillFilter: _fillFilter,
+      );
       stopwatch.stop();
 
       // Guard against stale response overwriting newer state

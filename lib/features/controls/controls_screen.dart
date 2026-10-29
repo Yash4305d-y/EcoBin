@@ -84,6 +84,74 @@ class ControlsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _handleCloseLid(
+    BuildContext context,
+    WidgetRef ref,
+    DeviceStatus status,
+  ) async {
+    final pending = ref.read(isCommandPendingProvider);
+    if (pending ||
+        status.lidState == LidState.closed ||
+        status.lidState == LidState.moving) {
+      return;
+    }
+
+    if (status.mode == OperatingMode.maintenance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cannot close lid: Maintenance Mode is active (Lid Locked).',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    ref.read(isCommandPendingProvider.notifier).setPending(true);
+    HapticFeedback.mediumImpact();
+    try {
+      await ref.read(deviceRepositoryProvider).closeLid();
+      if (context.mounted) {
+        final currentLid = ref
+            .read(deviceRepositoryProvider)
+            .getCurrentStatus()
+            .lidState;
+        final isConfirmed = currentLid == LidState.closed;
+        final message = isConfirmed
+            ? 'Lid is closed.'
+            : 'Command sent. Awaiting confirmation from EcoBin.';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: isConfirmed
+                ? AppColors.slateSurfaceVariant
+                : AppColors.warningContainer,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Couldn't connect to EcoBin."),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _handleCloseLid(context, ref, status),
+            ),
+          ),
+        );
+      }
+    } finally {
+      ref.read(isCommandPendingProvider.notifier).setPending(false);
+    }
+  }
+
   Future<void> _handleSetMode(
     BuildContext context,
     WidgetRef ref,
@@ -285,41 +353,82 @@ class ControlsScreen extends ConsumerWidget {
                   ),
                   AppSpacing.gapH24,
 
-                  // Manual Actuation Section Header
-                  const Text(
-                    'Manual Actuation',
-                    style: AppTextStyles.titleMedium,
-                  ),
-                  AppSpacing.gapH12,
-
-                  // Open Lid Button (Lid closes automatically)
-                  PressableScale(
-                    enabled: !isLidMoving && !isLidOpen && !isMaintenance,
-                    onTap: (isLidMoving || isLidOpen || isMaintenance)
-                        ? null
-                        : () => _handleOpenLid(context, ref, status),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton.icon(
-                        onPressed: (isLidMoving || isLidOpen || isMaintenance)
-                            ? null
-                            : () => _handleOpenLid(context, ref, status),
-                        icon: isLidMoving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.onMintGreen,
-                                ),
-                              )
-                            : const Icon(Icons.arrow_upward_rounded),
-                        label: const Text('Open Lid'),
-                      ),
+                  // Manual Actuation Section: Specifically shown in Manual Mode
+                  if (status.mode == OperatingMode.manual) ...[
+                    const Text(
+                      'Manual Actuation',
+                      style: AppTextStyles.titleMedium,
                     ),
-                  ),
-                  AppSpacing.gapH24,
+                    AppSpacing.gapH12,
+                    Row(
+                      children: [
+                        // Open Lid Button
+                        Expanded(
+                          child: PressableScale(
+                            enabled:
+                                !isLidMoving && !isLidOpen && !isMaintenance,
+                            onTap: (isLidMoving || isLidOpen || isMaintenance)
+                                ? null
+                                : () => _handleOpenLid(context, ref, status),
+                            child: SizedBox(
+                              height: 50,
+                              child: FilledButton.icon(
+                                onPressed:
+                                    (isLidMoving || isLidOpen || isMaintenance)
+                                    ? null
+                                    : () =>
+                                          _handleOpenLid(context, ref, status),
+                                icon: isLidMoving && !isLidOpen
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.onMintGreen,
+                                        ),
+                                      )
+                                    : const Icon(Icons.arrow_upward_rounded),
+                                label: const Text('Open Lid'),
+                              ),
+                            ),
+                          ),
+                        ),
+                        AppSpacing.gapW12,
+                        // Close Lid Button
+                        Expanded(
+                          child: PressableScale(
+                            enabled:
+                                !isLidMoving && isLidOpen && !isMaintenance,
+                            onTap: (isLidMoving || !isLidOpen || isMaintenance)
+                                ? null
+                                : () => _handleCloseLid(context, ref, status),
+                            child: SizedBox(
+                              height: 50,
+                              child: OutlinedButton.icon(
+                                onPressed:
+                                    (isLidMoving || !isLidOpen || isMaintenance)
+                                    ? null
+                                    : () =>
+                                          _handleCloseLid(context, ref, status),
+                                icon: isLidMoving && isLidOpen
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.mintGreen,
+                                        ),
+                                      )
+                                    : const Icon(Icons.arrow_downward_rounded),
+                                label: const Text('Close Lid'),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapH24,
+                  ],
 
                   // Operating Mode Selection Header
                   const Text(

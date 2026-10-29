@@ -33,32 +33,98 @@ class AnimatedFillGauge extends StatefulWidget {
   final double size;
   final double strokeWidth;
 
+  @visibleForTesting
+  static void resetStaticMemory() {
+    _AnimatedFillGaugeState.resetStaticMemory();
+  }
+
   @override
   State<AnimatedFillGauge> createState() => _AnimatedFillGaugeState();
 }
 
-class _AnimatedFillGaugeState extends State<AnimatedFillGauge> {
-  double _previousPercentage = 0.0;
+class _AnimatedFillGaugeState extends State<AnimatedFillGauge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late Animation<double> _animation;
+
+  /// Retains the last known valid fill percentage across rebuilds and widget remounts,
+  /// preventing the gauge from unexpectedly snapping or restarting its animation from zero.
+  static double? _lastKnownPercentage;
+
+  double? _lastTarget;
+
+  @visibleForTesting
+  static void resetStaticMemory() {
+    _lastKnownPercentage = null;
+  }
 
   @override
   void initState() {
     super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppMotion.gaugeFill,
+    );
+
     if (widget.fillPercentage != null) {
-      _previousPercentage = widget.fillPercentage!.clamp(0.0, 100.0);
+      final target = widget.fillPercentage!.clamp(0.0, 100.0);
+      _lastTarget = target;
+      final start = _lastKnownPercentage ?? target;
+      _lastKnownPercentage = target;
+
+      if ((start - target).abs() > 0.1) {
+        _animation = Tween<double>(begin: start, end: target).animate(
+          CurvedAnimation(parent: _controller, curve: AppMotion.smoothCurve),
+        );
+        _controller.forward();
+      } else {
+        _animation = AlwaysStoppedAnimation<double>(target);
+      }
+    } else {
+      _animation = AlwaysStoppedAnimation<double>(_lastKnownPercentage ?? 0.0);
     }
   }
 
   @override
   void didUpdateWidget(covariant AnimatedFillGauge oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.fillPercentage != null && widget.fillPercentage != null) {
-      // Only animate when the value meaningfully changed (> 0.05)
-      if ((oldWidget.fillPercentage! - widget.fillPercentage!).abs() > 0.05) {
-        _previousPercentage = oldWidget.fillPercentage!.clamp(0.0, 100.0);
-      }
-    } else if (widget.fillPercentage != null) {
-      _previousPercentage = widget.fillPercentage!.clamp(0.0, 100.0);
+
+    if (widget.fillPercentage == null) {
+      // Sensor reading became unavailable.
+      // Retain last known value in memory so that when reading resumes,
+      // the gauge glides smoothly from its prior state rather than zero.
+      _lastTarget = null;
+      return;
     }
+
+    final newTarget = widget.fillPercentage!.clamp(0.0, 100.0);
+    _lastKnownPercentage = newTarget;
+
+    // Requirement 8: Avoid restarting animations for tiny jitter (< 0.2%)
+    if (_lastTarget != null && (newTarget - _lastTarget!).abs() < 0.2) {
+      return;
+    }
+
+    final start = _animation.value;
+    _lastTarget = newTarget;
+
+    final duration = AppMotion.duration(context, AppMotion.gaugeFill);
+    final curve = AppMotion.prefersReducedMotion(context)
+        ? Curves.linear
+        : AppMotion.smoothCurve;
+
+    _controller.duration = duration;
+    _animation = Tween<double>(
+      begin: start,
+      end: newTarget,
+    ).animate(CurvedAnimation(parent: _controller, curve: curve));
+    _controller.forward(from: 0.0);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Color _getBlendedColor(double percentage) {
@@ -138,18 +204,11 @@ class _AnimatedFillGaugeState extends State<AnimatedFillGauge> {
       );
     }
 
-    final targetPercentage = widget.fillPercentage!.clamp(0.0, 100.0);
-    final duration = AppMotion.duration(context, AppMotion.gaugeFill);
-    final curve = AppMotion.prefersReducedMotion(context)
-        ? Curves.linear
-        : AppMotion.smoothCurve;
-
     return RepaintBoundary(
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: _previousPercentage, end: targetPercentage),
-        duration: duration,
-        curve: curve,
-        builder: (context, animatedValue, child) {
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, _) {
+          final animatedValue = _animation.value;
           final currentColor = _getBlendedColor(animatedValue);
           final progress = (animatedValue / 100.0).clamp(0.0, 1.0);
 

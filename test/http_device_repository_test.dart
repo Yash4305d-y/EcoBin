@@ -388,4 +388,97 @@ void main() {
       container.dispose();
     });
   });
+
+  group('HttpDeviceRepository Actuation & Fill Filtering Tests', () {
+    test(
+      'closeLid issues POST /api/lid/close and transitions state cleanly',
+      () async {
+        String? executedPath;
+        String? executedMethod;
+
+        final mockClient = MockClient((request) async {
+          executedPath = request.url.path;
+          executedMethod = request.method;
+
+          if (request.url.path == '/api/lid/close') {
+            return http.Response(
+              jsonEncode({'status': 'accepted', 'lid_state': 'closed'}),
+              200,
+            );
+          } else if (request.url.path == '/api/status') {
+            return http.Response(
+              jsonEncode({
+                'lid_state': 'closed',
+                'mode': 'manual',
+                'fill_sensor_ok': true,
+                'fill_distance_cm': 13.0,
+              }),
+              200,
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final service = DeviceApiService(client: mockClient);
+        final repo = HttpDeviceRepository(
+          apiService: service,
+          deviceIp: '192.168.4.1',
+          autoStartPolling: false,
+        );
+
+        await repo.closeLid();
+
+        expect(executedPath, '/api/status'); // Polled after close
+        expect(executedMethod, 'GET');
+        expect(repo.getCurrentStatus().lidState, LidState.closed);
+
+        repo.dispose();
+      },
+    );
+
+    test('HttpDeviceRepository smooths fluctuating fill sensor readings using rolling median', () async {
+      double simulatedDistance = 13.0;
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/status') {
+          return http.Response(
+            jsonEncode({
+              'lid_state': 'closed',
+              'mode': 'automatic',
+              'fill_sensor_ok': true,
+              'fill_distance_cm': simulatedDistance,
+            }),
+            200,
+          );
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final service = DeviceApiService(client: mockClient);
+      final repo = HttpDeviceRepository(
+        apiService: service,
+        deviceIp: '192.168.4.1',
+        autoStartPolling: false,
+      );
+
+      // Poll 1: 13.0 cm -> 50%
+      simulatedDistance = 13.0;
+      await repo.pollStatus();
+      expect(repo.getCurrentStatus().fillPercentage, closeTo(50.0, 0.01));
+
+      // Poll 2: 13.2 cm -> median (13.0 + 13.2)/2 = 13.1 -> 49.5%
+      simulatedDistance = 13.2;
+      await repo.pollStatus();
+      expect(repo.getCurrentStatus().fillPercentage, closeTo(49.5, 0.01));
+
+      // Poll 3: Glitch spike to 22.0 cm -> history [13.0, 13.2, 22.0] -> median 13.2 cm -> 49.0%
+      simulatedDistance = 22.0;
+      await repo.pollStatus();
+      // Does not drop to 5%, outlier 22.0 cm is safely ignored by median!
+      expect(repo.getCurrentStatus().fillPercentage, closeTo(49.0, 0.01));
+      expect(repo.getCurrentStatus().fillDistanceCm, 13.2);
+
+      repo.dispose();
+    });
+  });
 }

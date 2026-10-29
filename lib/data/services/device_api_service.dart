@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../../core/constants/app_constants.dart';
 import '../../core/errors/device_exceptions.dart';
+import '../../core/utils/dustbin_fill_calculator.dart';
 import '../models/device_status.dart';
 import 'settings_service.dart';
 
@@ -93,7 +94,10 @@ class DeviceApiService {
   }
 
   /// Sends `GET /api/status` and parses telemetry into [DeviceStatus].
-  Future<DeviceStatus> getStatus(String ipAddress) async {
+  Future<DeviceStatus> getStatus(
+    String ipAddress, {
+    RollingMedianFillFilter? fillFilter,
+  }) async {
     final uri = _buildUri(ipAddress, '/api/status');
     final response = await _sendRequest(
       () => _client.get(uri),
@@ -115,6 +119,7 @@ class DeviceApiService {
         json,
         deviceIp: ipAddress,
         communicationTime: DateTime.now(),
+        fillFilter: fillFilter,
       );
     } catch (e) {
       throw DeviceDataException(

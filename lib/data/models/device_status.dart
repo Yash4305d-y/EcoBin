@@ -118,6 +118,7 @@ class DeviceStatus {
     Map<String, dynamic> json, {
     required String deviceIp,
     DateTime? communicationTime,
+    RollingMedianFillFilter? fillFilter,
   }) {
     if (!json.containsKey('lid_state') || !json.containsKey('mode')) {
       throw const FormatException('Missing required fields: lid_state or mode');
@@ -159,7 +160,7 @@ class DeviceStatus {
     }
 
     // Fill distance (fill_distance_cm with fallback to legacy distance_cm)
-    final double? parsedFillDistance;
+    double? parsedFillDistance;
     final dynamic rawFillDist = json['fill_distance_cm'] ?? json['distance_cm'];
     if (rawFillDist is num) {
       parsedFillDistance = rawFillDist.toDouble();
@@ -172,6 +173,18 @@ class DeviceStatus {
     final dynamic rawFill = json['fill_percentage'];
     if (rawFill is num) {
       parsedFill = rawFill.toDouble().clamp(0.0, 100.0);
+    } else if (fillFilter != null) {
+      parsedFill = fillFilter.addReading(
+        parsedFillDistance,
+        fillSensorOk: parsedFillSensorOk,
+      );
+      if (parsedFillSensorOk != false &&
+          parsedFill != null &&
+          fillFilter.medianDistance != null) {
+        parsedFillDistance = double.parse(
+          fillFilter.medianDistance!.toStringAsFixed(1),
+        );
+      }
     } else if (parsedFillDistance != null && parsedFillSensorOk != false) {
       parsedFill = const DustbinFillCalculator().calculate(
         parsedFillDistance,
