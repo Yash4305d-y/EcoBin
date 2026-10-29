@@ -6,32 +6,32 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('DustbinFillCalculator Unit Tests', () {
     const calculator = DustbinFillCalculator(
-      emptyDistanceCm: 23.0,
+      emptyDistanceCm: 20.0,
       fullDistanceCm: 3.0,
     );
 
     test('Default calibration constants match user physical bin specs', () {
-      expect(AppConstants.defaultEmptyDistanceCm, 23.0);
+      expect(AppConstants.defaultEmptyDistanceCm, 20.0);
       expect(AppConstants.defaultFullDistanceCm, 3.0);
     });
 
     test(
       'Accurately calculates fill percentage using calibrated depth formula',
       () {
-        // Empty bin: 23.0 cm -> ((23 - 23) / 20) * 100 = 0.0%
-        expect(calculator.calculate(23.0), closeTo(0.0, 0.01));
+        // Empty bin: 20.0 cm -> ((20 - 20) / 17) * 100 = 0.0%
+        expect(calculator.calculate(20.0), closeTo(0.0, 0.01));
 
-        // Half full: 13.0 cm -> ((23 - 13) / 20) * 100 = 50.0%
-        expect(calculator.calculate(13.0), closeTo(50.0, 0.01));
+        // Half full: 11.5 cm -> ((20 - 11.5) / 17) * 100 = 50.0%
+        expect(calculator.calculate(11.5), closeTo(50.0, 0.01));
 
-        // Full bin: 3.0 cm -> ((23 - 3) / 20) * 100 = 100.0%
+        // Full bin: 3.0 cm -> ((20 - 3) / 17) * 100 = 100.0%
         expect(calculator.calculate(3.0), closeTo(100.0, 0.01));
 
-        // Quarter full: 18.0 cm -> ((23 - 18) / 20) * 100 = 25.0%
-        expect(calculator.calculate(18.0), closeTo(25.0, 0.01));
+        // Quarter full: 15.75 cm -> ((20 - 15.75) / 17) * 100 = 25.0%
+        expect(calculator.calculate(15.75), closeTo(25.0, 0.01));
 
-        // Three quarters full: 8.0 cm -> ((23 - 8) / 20) * 100 = 75.0%
-        expect(calculator.calculate(8.0), closeTo(75.0, 0.01));
+        // Three quarters full: 7.25 cm -> ((20 - 7.25) / 17) * 100 = 75.0%
+        expect(calculator.calculate(7.25), closeTo(75.0, 0.01));
       },
     );
 
@@ -87,12 +87,12 @@ void main() {
         'lid_state': 'closed',
         'mode': 'automatic',
         'fill_sensor_ok': true,
-        'fill_distance_cm': 13.0, // 10 cm of trash in 20cm span = 50.0%
+        'fill_distance_cm': 11.5, // 8.5 cm of trash in 17cm span = 50.0%
       };
 
       final status = DeviceStatus.fromJson(json, deviceIp: '192.168.4.1');
       expect(status.fillPercentage, closeTo(50.0, 0.01));
-      expect(status.fillDistanceCm, 13.0);
+      expect(status.fillDistanceCm, 11.5);
     });
 
     test('Calculates fill percentage from legacy distance_cm fallback when fill_percentage is null', () {
@@ -101,12 +101,12 @@ void main() {
         'mode': 'automatic',
         'fill_percentage': null,
         'sensor_ok': true,
-        'distance_cm': 8.0, // ((23 - 8) / 20) * 100 = 75.0%
+        'distance_cm': 7.25, // ((20 - 7.25) / 17) * 100 = 75.0%
       };
 
       final status = DeviceStatus.fromJson(json, deviceIp: '192.168.4.1');
       expect(status.fillPercentage, closeTo(75.0, 0.01));
-      expect(status.fillDistanceCm, 8.0);
+      expect(status.fillDistanceCm, 7.25);
     });
 
     test('Prioritizes pre-calculated ESP fill_percentage when provided as a valid number', () {
@@ -145,7 +145,7 @@ void main() {
         'lid_state': 'closed',
         'mode': 'automatic',
         'fill_sensor_ok': true,
-        'fill_distance_cm': 13.0,
+        'fill_distance_cm': 11.5,
       };
       final status1 = DeviceStatus.fromJson(
         json1,
@@ -153,39 +153,39 @@ void main() {
         fillFilter: filter,
       );
       expect(status1.fillPercentage, closeTo(50.0, 0.01));
-      expect(status1.fillDistanceCm, 13.0);
+      expect(status1.fillDistanceCm, 11.5);
 
-      // Reading with ultrasonic outlier echo spike: 22.0 cm
+      // Reading with ultrasonic outlier echo spike: 25.0 cm
       final jsonSpike = {
         'lid_state': 'closed',
         'mode': 'automatic',
         'fill_sensor_ok': true,
-        'fill_distance_cm': 22.0,
+        'fill_distance_cm': 25.0,
       };
       final status2 = DeviceStatus.fromJson(
         jsonSpike,
         deviceIp: '192.168.4.1',
         fillFilter: filter,
       );
-      // History: [13.0, 22.0] -> median: 17.5 cm -> ((23 - 17.5)/20)*100 = 27.5%
-      expect(status2.fillPercentage, closeTo(27.5, 0.01));
+      // History: [11.5, 25.0] -> median: 18.25 cm -> ((20 - 18.25)/17)*100 = 10.29%
+      expect(status2.fillPercentage, closeTo(10.29, 0.01));
 
-      // Third reading settles back to authentic level: 13.2 cm
+      // Third reading settles back to authentic level: 11.5 cm
       final json3 = {
         'lid_state': 'closed',
         'mode': 'automatic',
         'fill_sensor_ok': true,
-        'fill_distance_cm': 13.2,
+        'fill_distance_cm': 11.5,
       };
       final status3 = DeviceStatus.fromJson(
         json3,
         deviceIp: '192.168.4.1',
         fillFilter: filter,
       );
-      // History: [13.0, 22.0, 13.2] -> sorted [13.0, 13.2, 22.0] -> median: 13.2 cm!
-      // Outlier 22.0 cm is completely rejected by median!
-      expect(status3.fillPercentage, closeTo(49.0, 0.01));
-      expect(status3.fillDistanceCm, 13.2);
+      // History: [11.5, 25.0, 11.5] -> sorted [11.5, 11.5, 25.0] -> median: 11.5 cm!
+      // Outlier 25.0 cm is completely rejected by median!
+      expect(status3.fillPercentage, closeTo(50.0, 0.01));
+      expect(status3.fillDistanceCm, 11.5);
     });
   });
 
@@ -198,32 +198,32 @@ void main() {
         expect(filter.sampleCount, 0);
         expect(filter.medianDistance, isNull);
 
-        // Sample 1: 15.0 cm -> Fill: ((23-15)/20)*100 = 40.0%
-        expect(filter.addReading(15.0), closeTo(40.0, 0.01));
-        expect(filter.medianDistance, 15.0);
+        // Sample 1: 11.5 cm -> Fill: ((20-11.5)/17)*100 = 50.0%
+        expect(filter.addReading(11.5), closeTo(50.0, 0.01));
+        expect(filter.medianDistance, 11.5);
         expect(filter.sampleCount, 1);
 
-        // Sample 2: 15.2 cm -> sorted [15.0, 15.2] -> median: 15.1 cm -> ((23-15.1)/20)*100 = 39.5%
-        expect(filter.addReading(15.2), closeTo(39.5, 0.01));
-        expect(filter.medianDistance, 15.1);
+        // Sample 2: 11.7 cm -> sorted [11.5, 11.7] -> median: 11.6 cm -> ((20-11.6)/17)*100 = 49.41%
+        expect(filter.addReading(11.7), closeTo(49.41, 0.01));
+        expect(filter.medianDistance, 11.6);
 
-        // Sample 3: Spike echo glitch 22.0 cm -> sorted [15.0, 15.2, 22.0] -> median: 15.2 cm
-        expect(filter.addReading(22.0), closeTo(39.0, 0.01));
-        expect(filter.medianDistance, 15.2);
+        // Sample 3: Spike echo glitch 25.0 cm -> sorted [11.5, 11.7, 25.0] -> median: 11.7 cm -> ((20-11.7)/17)*100 = 48.82%
+        expect(filter.addReading(25.0), closeTo(48.82, 0.01));
+        expect(filter.medianDistance, 11.7);
 
-        // Sample 4: 14.8 cm -> sorted [14.8, 15.0, 15.2, 22.0] -> median: (15.0+15.2)/2 = 15.1 cm
-        expect(filter.addReading(14.8), closeTo(39.5, 0.01));
-        expect(filter.medianDistance, 15.1);
+        // Sample 4: 11.3 cm -> sorted [11.3, 11.5, 11.7, 25.0] -> median: (11.5+11.7)/2 = 11.6 cm -> 49.41%
+        expect(filter.addReading(11.3), closeTo(49.41, 0.01));
+        expect(filter.medianDistance, 11.6);
 
-        // Sample 5: 15.0 cm -> sorted [14.8, 15.0, 15.0, 15.2, 22.0] -> median: 15.0 cm
-        expect(filter.addReading(15.0), closeTo(40.0, 0.01));
-        expect(filter.medianDistance, 15.0);
+        // Sample 5: 11.5 cm -> sorted [11.3, 11.5, 11.5, 11.7, 25.0] -> median: 11.5 cm -> 50.0%
+        expect(filter.addReading(11.5), closeTo(50.0, 0.01));
+        expect(filter.medianDistance, 11.5);
         expect(filter.sampleCount, 5);
 
-        // Sample 6: oldest (15.0) evicted, new 15.1 added
-        // [15.2, 22.0, 14.8, 15.0, 15.1] -> sorted [14.8, 15.0, 15.1, 15.2, 22.0] -> median: 15.1 cm
-        expect(filter.addReading(15.1), closeTo(39.5, 0.01));
-        expect(filter.medianDistance, 15.1);
+        // Sample 6: oldest (11.5) evicted, new 11.5 added
+        // [11.7, 25.0, 11.3, 11.5, 11.5] -> sorted [11.3, 11.5, 11.5, 11.7, 25.0] -> median: 11.5 cm -> 50.0%
+        expect(filter.addReading(11.5), closeTo(50.0, 0.01));
+        expect(filter.medianDistance, 11.5);
         expect(filter.sampleCount, 5);
       },
     );
@@ -265,7 +265,7 @@ void main() {
     test('Clamps output percentage to 0.0 - 100.0%', () {
       final filter = RollingMedianFillFilter(windowSize: 5);
 
-      // Over-empty distance (e.g. 30 cm > 23 cm) -> clamped to 0.0%
+      // Over-empty distance (e.g. 30 cm > 20 cm) -> clamped to 0.0%
       expect(filter.addReading(30.0), 0.0);
 
       // Over-full distance (e.g. 1.0 cm < 3.0 cm) -> clamped to 100.0%

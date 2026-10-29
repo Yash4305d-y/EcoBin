@@ -26,7 +26,7 @@ class MockDeviceRepository implements DeviceRepository {
       handSensorOk: true,
       fillSensorOk: true,
       handDistanceCm: 42.5,
-      fillDistanceCm: 10.2, // Calibrated for ~64% fill in 23cm bin
+      fillDistanceCm: 9.1, // Calibrated for ~64% fill in 20cm bin
     );
 
     _initSampleData();

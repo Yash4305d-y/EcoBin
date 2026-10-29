@@ -265,6 +265,62 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               AppSpacing.gapH16,
 
+              // Device Simulation / Mock Mode Card
+              AppCard(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: const [
+                            Icon(
+                              Icons.developer_board_rounded,
+                              size: 20,
+                              color: AppColors.mintGreen,
+                            ),
+                            AppSpacing.gapW8,
+                            Text(
+                              'Device Simulation Mode',
+                              style: AppTextStyles.titleSmall,
+                            ),
+                          ],
+                        ),
+                        Switch(
+                          value: ref.watch(settingsProvider).isDemoMode,
+                          activeThumbColor: AppColors.mintGreen,
+                          onChanged: (enabled) {
+                            ref
+                                .read(settingsProvider.notifier)
+                                .setDemoMode(enabled);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  enabled
+                                      ? 'Simulation Mode enabled. Actuation commands operate locally in mock.'
+                                      : 'Real HTTP Mode enabled. Connecting to physical ESP32.',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapH8,
+                    Text(
+                      'Simulate EcoBin hardware locally without a physical ESP8266. Ideal for testing Controls and lid actuation on an Android emulator.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AppSpacing.gapH16,
+
               // Diagnostics & Debug Logs Navigation Tile
               AppCard(
                 padding: EdgeInsets.zero,

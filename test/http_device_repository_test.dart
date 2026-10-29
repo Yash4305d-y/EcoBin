@@ -12,6 +12,7 @@ import 'package:ecobin/data/models/device_status.dart';
 import 'package:ecobin/data/providers/device_provider.dart';
 import 'package:ecobin/data/providers/settings_provider.dart';
 import 'package:ecobin/data/repositories/http_device_repository.dart';
+import 'package:ecobin/data/repositories/mock_device_repository.dart';
 import 'package:ecobin/data/services/device_api_service.dart';
 
 void main() {
@@ -461,24 +462,78 @@ void main() {
         autoStartPolling: false,
       );
 
-      // Poll 1: 13.0 cm -> 50%
-      simulatedDistance = 13.0;
+      // Poll 1: 11.5 cm -> ((20 - 11.5) / 17) * 100 = 50.0%
+      simulatedDistance = 11.5;
       await repo.pollStatus();
       expect(repo.getCurrentStatus().fillPercentage, closeTo(50.0, 0.01));
 
-      // Poll 2: 13.2 cm -> median (13.0 + 13.2)/2 = 13.1 -> 49.5%
-      simulatedDistance = 13.2;
+      // Poll 2: 11.7 cm -> median (11.5 + 11.7)/2 = 11.6 -> ((20 - 11.6) / 17) * 100 = 49.41%
+      simulatedDistance = 11.7;
       await repo.pollStatus();
-      expect(repo.getCurrentStatus().fillPercentage, closeTo(49.5, 0.01));
+      expect(repo.getCurrentStatus().fillPercentage, closeTo(49.41, 0.01));
 
-      // Poll 3: Glitch spike to 22.0 cm -> history [13.0, 13.2, 22.0] -> median 13.2 cm -> 49.0%
-      simulatedDistance = 22.0;
+      // Poll 3: Glitch spike to 25.0 cm -> history [11.5, 11.7, 25.0] -> median 11.7 cm -> 48.82%
+      simulatedDistance = 25.0;
       await repo.pollStatus();
-      // Does not drop to 5%, outlier 22.0 cm is safely ignored by median!
-      expect(repo.getCurrentStatus().fillPercentage, closeTo(49.0, 0.01));
-      expect(repo.getCurrentStatus().fillDistanceCm, 13.2);
+      // Does not drop to 0%, outlier 25.0 cm is safely ignored by median!
+      expect(repo.getCurrentStatus().fillPercentage, closeTo(48.82, 0.01));
+      expect(repo.getCurrentStatus().fillDistanceCm, 11.7);
 
       repo.dispose();
+    });
+
+    test('HttpDeviceRepository updates local status mode even if POST /api/mode fails due to offline', () async {
+      final mockClient = MockClient((request) async {
+        throw const SocketException('Connection refused');
+      });
+
+      final service = DeviceApiService(client: mockClient);
+      final repo = HttpDeviceRepository(
+        apiService: service,
+        deviceIp: '192.168.4.1',
+        autoStartPolling: false,
+      );
+
+      expect(repo.getCurrentStatus().mode, OperatingMode.automatic);
+
+      await expectLater(
+        repo.setOperatingMode(OperatingMode.manual),
+        throwsA(isA<DeviceConnectionException>()),
+      );
+
+      // Status mode is still updated locally in app
+      expect(repo.getCurrentStatus().mode, OperatingMode.manual);
+
+      repo.dispose();
+    });
+
+    test('deviceRepositoryProvider switches dynamically between HttpDeviceRepository and MockDeviceRepository via isDemoMode', () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      // Initially in real HTTP mode
+      expect(container.read(settingsProvider).isDemoMode, isFalse);
+      expect(
+        container.read(deviceRepositoryProvider),
+        isA<HttpDeviceRepository>(),
+      );
+
+      // Enable Demo/Simulation Mode
+      await container.read(settingsProvider.notifier).setDemoMode(true);
+      expect(container.read(settingsProvider).isDemoMode, isTrue);
+      expect(
+        container.read(deviceRepositoryProvider),
+        isA<MockDeviceRepository>(),
+      );
+
+      // Disable Demo Mode
+      await container.read(settingsProvider.notifier).setDemoMode(false);
+      expect(container.read(settingsProvider).isDemoMode, isFalse);
+      expect(
+        container.read(deviceRepositoryProvider),
+        isA<HttpDeviceRepository>(),
+      );
     });
   });
 }

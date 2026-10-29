@@ -81,8 +81,8 @@ void main() {
       );
       expect(states.last.value?.fillPercentage, 75.0);
 
-      // Verify realistic simulated depth calculation: 23 - (0.75 * 20) = 8.0 cm
-      expect(states.last.value?.fillDistanceCm, 8.0);
+      // Verify realistic simulated depth calculation: 20 - (0.75 * 17) = 7.25 -> 7.3 cm
+      expect(states.last.value?.fillDistanceCm, 7.3);
     });
   });
 

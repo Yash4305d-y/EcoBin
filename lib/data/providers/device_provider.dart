@@ -42,9 +42,13 @@ final httpDeviceRepositoryProvider = Provider<HttpDeviceRepository>((ref) {
   return repo;
 });
 
-/// Provides the active [DeviceRepository] directly connecting to the configured ESP32 IP.
+/// Provides the active [DeviceRepository] directly connecting to the configured ESP32 IP,
+/// or using the simulated MockDeviceRepository when Demo Mode is enabled.
 final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
   final settings = ref.watch(settingsProvider);
+  if (settings.isDemoMode) {
+    return ref.watch(mockDeviceRepositoryProvider);
+  }
   final httpRepo = ref.watch(httpDeviceRepositoryProvider);
   httpRepo.updateDeviceIp(settings.deviceIp);
   return httpRepo;

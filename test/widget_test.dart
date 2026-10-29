@@ -7,8 +7,16 @@ import 'package:ecobin/core/theme/app_theme.dart';
 import 'package:ecobin/data/models/device_connection_state.dart';
 import 'package:ecobin/data/models/device_status.dart';
 import 'package:ecobin/data/providers/device_provider.dart';
+
+import 'dart:async';
+
+import 'package:ecobin/data/models/app_alert.dart';
+import 'package:ecobin/data/models/debug_log_entry.dart';
+import 'package:ecobin/data/models/device_event.dart';
+import 'package:ecobin/data/repositories/device_repository.dart';
 import 'package:ecobin/data/repositories/mock_device_repository.dart';
 import 'package:ecobin/data/services/settings_service.dart';
+import 'package:ecobin/features/controls/controls_screen.dart';
 import 'package:ecobin/navigation/app_nav_shell.dart';
 
 void main() {
@@ -363,6 +371,222 @@ void main() {
     );
   });
 
+  group('ControlsScreen Visibility & Offline Usability Tests', () {
+    testWidgets(
+      'Controls buttons are hidden in Automatic mode and Maintenance mode, and both visible in Manual mode',
+      (WidgetTester tester) async {
+        final autoStatus = DeviceStatus(
+          isDemo: false,
+          connectionStatus: DeviceConnectionStatus.online,
+          lidState: LidState.closed,
+          mode: OperatingMode.automatic,
+          todayOpenings: 3,
+          openingsSinceBoot: 3,
+          lastUpdated: DateTime.now(),
+        );
+
+        final repo = FakeDeviceRepository(autoStatus);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [deviceRepositoryProvider.overrideWith((ref) => repo)],
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: const ControlsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Bin Actuation & Controls'), findsOneWidget);
+        expect(find.text('Automatic Mode'), findsWidgets);
+        expect(find.text('Open Lid'), findsNothing);
+        expect(find.text('Close Lid'), findsNothing);
+
+        // Switch to Manual Mode: both Open Lid and Close Lid become visible
+        repo.updateStatus(autoStatus.copyWith(mode: OperatingMode.manual));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Manual Actuation'), findsOneWidget);
+        expect(find.text('Open Lid'), findsOneWidget);
+        expect(find.text('Close Lid'), findsOneWidget);
+
+        // Switch to Maintenance Mode: buttons are hidden for safety
+        repo.updateStatus(autoStatus.copyWith(mode: OperatingMode.maintenance));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Maintenance Mode'), findsWidgets);
+        expect(find.text('Open Lid'), findsNothing);
+        expect(find.text('Close Lid'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Manual mode buttons remain visible when lid is closed, open, or moving',
+      (WidgetTester tester) async {
+        final baseManualStatus = DeviceStatus(
+          isDemo: false,
+          connectionStatus: DeviceConnectionStatus.online,
+          lidState: LidState.closed,
+          mode: OperatingMode.manual,
+          todayOpenings: 2,
+          openingsSinceBoot: 2,
+          lastUpdated: DateTime.now(),
+        );
+
+        final repo = FakeDeviceRepository(baseManualStatus);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [deviceRepositoryProvider.overrideWith((ref) => repo)],
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: const ControlsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Lid Closed: both visible, Open enabled, Close disabled
+        expect(find.text('Open Lid'), findsOneWidget);
+        expect(find.text('Close Lid'), findsOneWidget);
+        final openWhenClosed = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Open Lid'),
+        );
+        final closeWhenClosed = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Close Lid'),
+        );
+        expect(openWhenClosed.onPressed, isNotNull);
+        expect(closeWhenClosed.onPressed, isNull);
+
+        // 2. Lid Open: both visible, Open disabled, Close enabled
+        repo.updateStatus(baseManualStatus.copyWith(lidState: LidState.open));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Open Lid'), findsOneWidget);
+        expect(find.text('Close Lid'), findsOneWidget);
+        final openWhenOpen = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Open Lid'),
+        );
+        final closeWhenOpen = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Close Lid'),
+        );
+        expect(openWhenOpen.onPressed, isNull);
+        expect(closeWhenOpen.onPressed, isNotNull);
+
+        // 3. Lid Moving: both visible, both disabled with spinner
+        repo.updateStatus(baseManualStatus.copyWith(lidState: LidState.moving));
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Open Lid'), findsOneWidget);
+        expect(find.text('Close Lid'), findsOneWidget);
+        final openWhenMoving = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Open Lid'),
+        );
+        final closeWhenMoving = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Close Lid'),
+        );
+        expect(openWhenMoving.onPressed, isNull);
+        expect(closeWhenMoving.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'Controls screen renders when EcoBin is offline: buttons visible in Manual mode, disabled with explanation',
+      (WidgetTester tester) async {
+        final offlineManualStatus = DeviceStatus(
+          isDemo: false,
+          connectionStatus: DeviceConnectionStatus.offline,
+          lidState: LidState.closed,
+          mode: OperatingMode.manual,
+          todayOpenings: 0,
+          openingsSinceBoot: 0,
+          lastUpdated: DateTime.now(),
+        );
+
+        final repo = FakeDeviceRepository(offlineManualStatus);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [deviceRepositoryProvider.overrideWith((ref) => repo)],
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: const ControlsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Offline warning banner is shown
+        expect(find.text('EcoBin is Offline'), findsOneWidget);
+        expect(
+          find.text(
+            'Hardware commands disabled. Connect to EcoBin or enable Simulation Mode.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Simulate'), findsOneWidget);
+
+        // 2. Controls section is NOT hidden; both buttons are visible
+        expect(find.text('Manual Actuation'), findsOneWidget);
+        expect(find.text('Open Lid'), findsOneWidget);
+        expect(find.text('Close Lid'), findsOneWidget);
+
+        // 3. Explanation is displayed above buttons
+        expect(
+          find.text(
+            'EcoBin is offline. Reconnect Wi-Fi or enable Simulation Mode to actuate.',
+          ),
+          findsOneWidget,
+        );
+
+        // 4. Buttons are safely disabled since hardware is unreachable
+        final openBtn = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Open Lid'),
+        );
+        final closeBtn = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Close Lid'),
+        );
+        expect(openBtn.onPressed, isNull);
+        expect(closeBtn.onPressed, isNull);
+      },
+    );
+
+    testWidgets('Tapping Simulate in offline banner enables simulation mode', (
+      WidgetTester tester,
+    ) async {
+      final offlineManualStatus = DeviceStatus(
+        isDemo: false,
+        connectionStatus: DeviceConnectionStatus.offline,
+        lidState: LidState.closed,
+        mode: OperatingMode.manual,
+        todayOpenings: 0,
+        openingsSinceBoot: 0,
+        lastUpdated: DateTime.now(),
+      );
+
+      final repo = FakeDeviceRepository(offlineManualStatus);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [deviceRepositoryProvider.overrideWith((ref) => repo)],
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const ControlsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final simulateBtn = find.text('Simulate');
+      expect(simulateBtn, findsOneWidget);
+      await tester.tap(simulateBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Simulation Mode enabled'), findsOneWidget);
+    });
+  });
+
   group('MockDeviceRepository & Architecture Unit Tests', () {
     test('MockDeviceRepository manages state transitions cleanly', () async {
       final repo = MockDeviceRepository();
@@ -408,4 +632,79 @@ void main() {
       expect(SettingsService.isValidIpv4('192.168.01.1'), isFalse);
     });
   });
+}
+
+class FakeDeviceRepository implements DeviceRepository {
+  FakeDeviceRepository(this._status);
+
+  DeviceStatus _status;
+  final StreamController<DeviceStatus> _controller =
+      StreamController<DeviceStatus>.broadcast();
+
+  void updateStatus(DeviceStatus newStatus) {
+    _status = newStatus;
+    _controller.add(_status);
+  }
+
+  @override
+  DeviceStatus getCurrentStatus() => _status;
+
+  @override
+  Stream<DeviceStatus> watchStatus() async* {
+    yield _status;
+    yield* _controller.stream;
+  }
+
+  @override
+  Future<void> openLid() async {
+    _status = _status.copyWith(lidState: LidState.open);
+    _controller.add(_status);
+  }
+
+  @override
+  Future<void> closeLid() async {
+    _status = _status.copyWith(lidState: LidState.closed);
+    _controller.add(_status);
+  }
+
+  @override
+  Future<void> setOperatingMode(OperatingMode mode) async {
+    _status = _status.copyWith(mode: mode);
+    _controller.add(_status);
+  }
+
+  @override
+  Future<void> refreshStatus() async {}
+
+  @override
+  Future<Map<String, dynamic>> checkHealth() async => {'status': 'ok'};
+
+  @override
+  Future<void> setFillPercentage(double? percentage) async {}
+
+  @override
+  Future<List<DeviceEvent>> getEvents() async => [];
+
+  @override
+  Future<List<AppAlert>> getAlerts() async => [];
+
+  @override
+  Future<void> dismissAlert(String alertId) async {}
+
+  @override
+  Future<List<DebugLogEntry>> getDebugLogs() async => [];
+
+  @override
+  void clearDebugLogs() {}
+
+  @override
+  void pausePolling() {}
+
+  @override
+  void resumePolling() {}
+
+  @override
+  void dispose() {
+    _controller.close();
+  }
 }

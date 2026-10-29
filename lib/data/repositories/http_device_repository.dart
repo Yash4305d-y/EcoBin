@@ -442,6 +442,9 @@ class HttpDeviceRepository implements DeviceRepository {
         'POST /api/mode FAILED (${stopwatch.elapsedMilliseconds}ms): $e',
         LogSeverity.error,
       );
+      // Retain optimistic mode locally so UI controls reflect the user's selected mode
+      _status = _status.copyWith(mode: mode, lastUpdated: DateTime.now());
+      _statusController.add(_status);
       rethrow;
     }
   }
