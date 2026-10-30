@@ -6,7 +6,7 @@ EcoBin is an Android application designed to monitor and control an ESP32-based 
 
 ## 📥 Download EcoBin
 
-**[⬇️ Download EcoBin for Android (APK)](https://github.com/Yash4305d-y/APP/releases/download/v1.0.0/app-arm64-v8a-release.apk)**
+**[⬇️ Download EcoBin for Android (APK)](https://github.com/Yash4305d-y/EcoBin/releases/download/v1.1.0/app-release.apk)**
 
 Download the APK and install it on a compatible Android phone. If Android blocks the installation, allow installation from that source in your device settings.
 
